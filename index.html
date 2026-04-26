@@ -1049,14 +1049,11 @@ async function fetchJiraCloudId() {
 }
 
 async function fetchJiraUserInfo() {
-  var token = localStorage.getItem('jira_access_token');
-  var resp = await fetch('https://api.atlassian.com/me', {
-    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
-  });
+  var resp = await jiraFetch('/rest/api/3/myself');
   var user = await resp.json();
-  localStorage.setItem('jira_user_name', user.name || user.nickname || '');
-  localStorage.setItem('jira_user_email', user.email || '');
-  localStorage.setItem('jira_account_id', user.account_id || '');
+  localStorage.setItem('jira_user_name', user.displayName || '');
+  localStorage.setItem('jira_user_email', user.emailAddress || '');
+  localStorage.setItem('jira_account_id', user.accountId || '');
 }
 
 function isJiraConnected() {
