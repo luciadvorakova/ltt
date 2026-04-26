@@ -135,6 +135,52 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .history-day-total { font-size: 13px; font-weight: 700; color: white; }
 .empty { text-align: center; color: rgba(255,255,255,0.42); font-size: 14px; padding: 2.5rem 0; }
 
+/* Jira picker */
+.jira-picker { margin-bottom: 1rem; }
+.jira-picker-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.jira-tab-btn { padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+.jira-tab-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+.jira-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); color: white; outline: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2); }
+.jira-search-row input::placeholder { color: rgba(255,255,255,0.4); }
+.jira-results { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); transition: background 0.1s; }
+.jira-result-item:hover { background: rgba(255,255,255,0.18); }
+.jira-result-key { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); white-space: nowrap; min-width: 56px; }
+.jira-result-name { font-size: 13px; font-weight: 500; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jira-result-project { font-size: 11px; color: rgba(255,255,255,0.45); white-space: nowrap; }
+.jira-breadcrumb { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: rgba(255,255,255,0.55); flex-wrap: wrap; }
+.jira-breadcrumb span { cursor: pointer; }
+.jira-breadcrumb span:hover { color: white; }
+.jira-loading { text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; padding: 1.5rem 0; }
+.jira-issue-key-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); margin-left: 6px; display: inline-flex; align-items: center; vertical-align: middle; }
+.add-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+.mode-btn { padding: 7px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+.mode-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+
+/* Jira picker */
+.jira-picker { margin-bottom: 1rem; }
+.jira-picker-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.jira-tab-btn { padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+.jira-tab-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+.jira-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); color: white; outline: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2); }
+.jira-search-row input::placeholder { color: rgba(255,255,255,0.4); }
+.jira-results { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); transition: background 0.1s; }
+.jira-result-item:hover { background: rgba(255,255,255,0.18); }
+.jira-result-key { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); white-space: nowrap; min-width: 56px; }
+.jira-result-name { font-size: 13px; font-weight: 500; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jira-result-project { font-size: 11px; color: rgba(255,255,255,0.45); white-space: nowrap; }
+.jira-breadcrumb { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: rgba(255,255,255,0.55); flex-wrap: wrap; }
+.jira-breadcrumb span { cursor: pointer; }
+.jira-breadcrumb span:hover { color: white; }
+.jira-loading { text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; padding: 1.5rem 0; }
+.jira-issue-key-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); margin-left: 6px; display: inline-flex; align-items: center; vertical-align: middle; }
+.add-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+.mode-btn { padding: 7px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+.mode-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+
 /* Weekly */
 .weekly-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
 .weekly-nav { display: flex; gap: 6px; align-items: center; }
@@ -246,9 +292,29 @@ input[type="color"] {
       <div class="timer-sub" id="running-label">Select a task below</div>
     </div>
 
-    <div class="add-task-row">
+    <div class="add-mode-toggle">
+      <button class="mode-btn active" id="mode-manual" onclick="setAddMode('manual')">Manual</button>
+      <button class="mode-btn" id="mode-jira" onclick="setAddMode('jira')">From Jira</button>
+    </div>
+    <div id="manual-add" class="add-task-row">
       <input type="text" id="new-task-input" placeholder="Add a task for today..." maxlength="80" onkeydown="if(event.key==='Enter') addTask()" oninput="updateStartBtn()" />
       <button class="btn-add" onclick="addTask()">+ Add</button>
+    </div>
+    <div id="jira-add" style="display:none;" class="jira-picker">
+      <div class="jira-picker-tabs">
+        <button class="jira-tab-btn active" id="jtab-search" onclick="setJiraTab('search')">Search</button>
+        <button class="jira-tab-btn" id="jtab-browse" onclick="setJiraTab('browse')">Browse</button>
+      </div>
+      <div id="jira-search-pane">
+        <div class="jira-search-row">
+          <input type="text" id="jira-search-input" placeholder="Search issues..." oninput="debounceJiraSearch(this.value)" />
+        </div>
+        <div class="jira-results" id="jira-search-results"><div class="jira-loading">Type to search Jira issues</div></div>
+      </div>
+      <div id="jira-browse-pane" style="display:none;">
+        <div class="jira-breadcrumb" id="jira-breadcrumb"><span onclick="jiraBrowse('projects')">All projects</span></div>
+        <div class="jira-results" id="jira-browse-results"><div class="jira-loading">Loading...</div></div>
+      </div>
     </div>
 
     <div class="controls">
@@ -708,10 +774,11 @@ function renderToday() {
       : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>')
     : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>';
     const timeDisplay = e.ms > 0 ? fmtShort(e.ms) : '';
+    var jiraBadge = e.jiraKey ? '<span class="jira-issue-key-badge">' + esc(e.jiraKey) + '</span>' : '';
     return '<div class="entry-card" draggable="true" data-id="' + e.id + '">' +
       '<span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>' +
       '<div class="entry-info">' +
-        '<div class="entry-name">' + esc(e.name) + (e.untracked && e.ms === 0 ? '<span class="untracked-badge">planned</span>' : '') + '</div>' +
+        '<div class="entry-name">' + (e.jiraKey ? esc(e.jiraSummary || e.name) : esc(e.name)) + jiraBadge + (e.untracked && e.ms === 0 ? '<span class="untracked-badge">planned</span>' : '') + '</div>' +
         (e.ms > 0 ? '<div class="entry-meta">Last tracked ' + timeOfDay(e.ts) + '</div>' : '') +
       '</div>' +
       '<div class="entry-actions">' +
@@ -1251,6 +1318,167 @@ function toggleTheme() {
   }
   renderToday();
   renderHistory();
+}
+
+// ---- JIRA PICKER ----
+var _addMode = 'manual';
+var _jiraTab = 'search';
+var _jiraSearchTimer = null;
+var _jiraBrowseState = { level: 'projects', projectKey: null, projectName: '' };
+
+function setAddMode(mode) {
+  _addMode = mode;
+  document.getElementById('manual-add').style.display = mode === 'manual' ? 'flex' : 'none';
+  document.getElementById('jira-add').style.display = mode === 'jira' ? 'block' : 'none';
+  document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
+  document.getElementById('mode-jira').classList.toggle('active', mode === 'jira');
+  if (mode === 'jira') {
+    if (!isJiraConnected()) {
+      document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Please connect to Jira in Settings first.</div>';
+      return;
+    }
+    if (_jiraTab === 'browse') jiraBrowse('projects');
+  }
+}
+
+function setJiraTab(tab) {
+  _jiraTab = tab;
+  document.getElementById('jtab-search').classList.toggle('active', tab === 'search');
+  document.getElementById('jtab-browse').classList.toggle('active', tab === 'browse');
+  document.getElementById('jira-search-pane').style.display = tab === 'search' ? 'block' : 'none';
+  document.getElementById('jira-browse-pane').style.display = tab === 'browse' ? 'block' : 'none';
+  if (tab === 'browse') jiraBrowse('projects');
+}
+
+function debounceJiraSearch(val) {
+  clearTimeout(_jiraSearchTimer);
+  if (!val.trim()) {
+    document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Type to search Jira issues</div>';
+    return;
+  }
+  document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Searching...</div>';
+  _jiraSearchTimer = setTimeout(function() { jiraSearch(val); }, 400);
+}
+
+async function jiraSearch(query) {
+  try {
+    var jql = 'text ~ "' + query.replace(/"/g, '\"') + '" ORDER BY updated DESC';
+    var resp = await jiraFetch('/rest/api/3/issue/picker?query=' + encodeURIComponent(query) + '&currentJQL=' + encodeURIComponent(jql));
+    if (!resp.ok) throw new Error('Search failed');
+    var data = await resp.json();
+    var issues = [];
+    (data.sections || []).forEach(function(s) { issues = issues.concat(s.issues || []); });
+    renderJiraSearchResults(issues, query);
+  } catch(e) {
+    // fallback to JQL search
+    try {
+      var jql2 = 'summary ~ "' + query.replace(/"/g, '\"') + '*" OR text ~ "' + query.replace(/"/g, '\"') + '" ORDER BY updated DESC';
+      var resp2 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent(jql2) + '&maxResults=20&fields=summary,project,issuetype,status');
+      var data2 = await resp2.json();
+      renderJiraSearchResultsFull(data2.issues || []);
+    } catch(e2) {
+      document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Search failed. Please try again.</div>';
+    }
+  }
+}
+
+function renderJiraSearchResults(issues, query) {
+  var el = document.getElementById('jira-search-results');
+  if (!issues.length) { el.innerHTML = '<div class="jira-loading">No issues found for "' + esc(query) + '"</div>'; return; }
+  el.innerHTML = issues.map(function(issue) {
+    return '<div class="jira-result-item" data-key="' + esc(issue.key) + '" data-summary="' + esc(issue.summaryText || issue.summary || '') + '" onclick="handleJiraItemClick(this)">' +
+      '<span class="jira-result-key">' + esc(issue.key) + '</span>' +
+      '<span class="jira-result-name">' + esc(issue.summaryText || issue.summary || '') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function renderJiraSearchResultsFull(issues) {
+  var el = document.getElementById('jira-search-results');
+  if (!issues.length) { el.innerHTML = '<div class="jira-loading">No issues found</div>'; return; }
+  el.innerHTML = issues.map(function(issue) {
+    var summary = issue.fields ? issue.fields.summary : '';
+    var project = issue.fields && issue.fields.project ? issue.fields.project.name : '';
+    return '<div class="jira-result-item" data-key="' + esc(issue.key) + '" data-summary="' + esc(summary) + '" onclick="handleJiraItemClick(this)">' +
+      '<span class="jira-result-key">' + esc(issue.key) + '</span>' +
+      '<span class="jira-result-name">' + esc(summary) + '</span>' +
+      '<span class="jira-result-project">' + esc(project) + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+async function jiraBrowse(level, key, name) {
+  _jiraBrowseState.level = level;
+  var bc = document.getElementById('jira-breadcrumb');
+  var res = document.getElementById('jira-browse-results');
+  res.innerHTML = '<div class="jira-loading">Loading...</div>';
+
+  if (level === 'projects') {
+    _jiraBrowseState.projectKey = null;
+    bc.innerHTML = '<span style="color:white">All projects</span>';
+    try {
+      var resp = await jiraFetch('/rest/api/3/project/search?maxResults=50&orderBy=name');
+      var data = await resp.json();
+      var projects = data.values || [];
+      if (!projects.length) { res.innerHTML = '<div class="jira-loading">No projects found</div>'; return; }
+      res.innerHTML = projects.map(function(p) {
+        return '<div class="jira-result-item" data-key="' + esc(p.key) + '" data-name="' + esc(p.name) + '" onclick="handleJiraProjectClick(this)">' +
+          '<span class="jira-result-key">' + esc(p.key) + '</span>' +
+          '<span class="jira-result-name">' + esc(p.name) + '</span>' +
+        '</div>';
+      }).join('');
+    } catch(e) { res.innerHTML = '<div class="jira-loading">Failed to load projects</div>'; }
+
+  } else if (level === 'issues') {
+    _jiraBrowseState.projectKey = key;
+    _jiraBrowseState.projectName = name;
+    bc.innerHTML = '<span onclick="jiraBrowseProjects()">All projects</span>' +
+      '<span style="color:rgba(255,255,255,0.4)">›</span>' +
+      '<span style="color:white">' + esc(name) + '</span>';
+    try {
+      var jql = 'project = ' + key + ' ORDER BY updated DESC';
+      var resp2 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent(jql) + '&maxResults=30&fields=summary,issuetype,status');
+      var data2 = await resp2.json();
+      var issues = data2.issues || [];
+      if (!issues.length) { res.innerHTML = '<div class="jira-loading">No issues in this project</div>'; return; }
+      res.innerHTML = issues.map(function(issue) {
+        var summary = issue.fields ? issue.fields.summary : '';
+        return '<div class="jira-result-item" data-key="' + esc(issue.key) + '" data-summary="' + esc(summary) + '" onclick="handleJiraItemClick(this)">' +
+          '<span class="jira-result-key">' + esc(issue.key) + '</span>' +
+          '<span class="jira-result-name">' + esc(summary) + '</span>' +
+        '</div>';
+      }).join('');
+    } catch(e) { res.innerHTML = '<div class="jira-loading">Failed to load issues</div>'; }
+  }
+}
+
+function jiraBrowseProjects() { jiraBrowse('projects'); }
+function handleJiraProjectClick(el) {
+  var key = el.getAttribute('data-key');
+  var name = el.getAttribute('data-name');
+  jiraBrowse('issues', key, name);
+}
+
+function handleJiraItemClick(el) {
+  var key = el.getAttribute('data-key');
+  var summary = el.getAttribute('data-summary');
+  selectJiraIssue(key, summary);
+}
+
+function selectJiraIssue(key, summary) {
+  var entries = loadEntries();
+  var todayKey = dayKey(Date.now());
+  var todayCount = entries.filter(function(e) { return dayKey(e.ts || Date.now()) === todayKey; }).length;
+  var colorIdx = todayCount % PASTEL_COLORS.length;
+  var id = Date.now();
+  var name = '[' + key + '] ' + summary;
+  entries.push({ id: id, name: name, ms: 0, ts: Date.now(), colorIdx: colorIdx, untracked: true, jiraKey: key, jiraSummary: summary });
+  saveEntries(entries);
+  // Switch back to manual mode and reset
+  setAddMode('manual');
+  renderToday();
+  // Auto-start tracking
+  trackEntry(id);
 }
 
 // ---- DRAG AND DROP ----
