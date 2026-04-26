@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LTT — Lucy's Time Tracker</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --grad: linear-gradient(135deg, #7090d0 0%, #9060c8 35%, #b060a0 65%, #d07090 100%);
+  --text: rgba(255,255,255,1); --text2: rgba(255,255,255,0.52);
+  --danger: rgba(255,180,180,0.95); --danger-bg: rgba(255,80,80,0.14);
+  --radius: 16px; --radius-lg: 24px; --radius-sm: 99px;
+  /* liquid glass tokens */
+  --liq-bg: rgba(255,255,255,0.14);
+  --liq-border: rgba(255,255,255,0.32);
+  --liq-shadow: inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(255,255,255,0.06), inset 1px 0 0 rgba(255,255,255,0.14), inset -1px 0 0 rgba(255,255,255,0.06), 0 8px 32px rgba(60,20,120,0.14), 0 2px 8px rgba(60,20,120,0.07);
+  --liq-shadow-sm: inset 0 1px 0 rgba(255,255,255,0.38), inset 0 -1px 0 rgba(255,255,255,0.04), 0 4px 16px rgba(60,20,120,0.09);
+  --liq-shimmer: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, transparent 100%);
+  --btn-primary-bg: rgba(255,255,255,0.88);
+  --btn-primary-text: #2a0a50;
+  --input-bg: rgba(255,255,255,0.1);
+}
+:root.dark {
+  --grad: linear-gradient(135deg, #030810 0%, #090318 50%, #03080e 100%);
+  --text: rgba(255,255,255,1); --text2: rgba(255,255,255,0.42);
+  --danger: rgba(255,160,160,0.9); --danger-bg: rgba(255,80,80,0.1);
+  --radius: 16px; --radius-lg: 24px; --radius-sm: 99px;
+  --liq-bg: rgba(255,255,255,0.05);
+  --liq-border: rgba(255,255,255,0.12);
+  --liq-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(255,255,255,0.03), inset 1px 0 0 rgba(255,255,255,0.06), inset -1px 0 0 rgba(255,255,255,0.03), 0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.25);
+  --liq-shadow-sm: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(255,255,255,0.02), 0 4px 16px rgba(0,0,0,0.3);
+  --liq-shimmer: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 100%);
+  --btn-primary-bg: rgba(255,255,255,0.88);
+  --btn-primary-text: #0e041c;
+  --input-bg: rgba(255,255,255,0.07);
+}
+
+html, body { min-height: 100%; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--grad); background-attachment: fixed; color: var(--text); min-height: 100vh; position: relative; }
+.app { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+#grain-overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.08; background-repeat: repeat; background-size: 128px 128px; }
+
+/* Orbs behind main panel */
+.glass-app { position: relative; overflow: hidden; border-radius: var(--radius-lg); padding: 1.5rem 1.5rem 2rem; background: var(--liq-bg); border: 1px solid var(--liq-border); box-shadow: var(--liq-shadow); }
+.glass-app::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 60px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: linear-gradient(90deg, rgba(255,160,210,0.08) 0%, rgba(180,140,255,0.1) 25%, rgba(120,190,255,0.08) 50%, rgba(160,255,200,0.05) 75%, rgba(255,220,140,0.06) 100%); pointer-events: none; z-index: 0; }
+.glass-app::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: rgba(255,255,255,0.45); border-radius: var(--radius-lg) var(--radius-lg) 0 0; pointer-events: none; z-index: 1; }
+.glass-app > * { position: relative; z-index: 2; }
+
+h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
+
+/* Theme toggle */
+.theme-toggle { position: relative; overflow: hidden; background: var(--liq-bg); border: 1px solid var(--liq-border); border-radius: 99px; padding: 5px 16px; font-size: 13px; font-weight: 600; cursor: pointer; color: white; box-shadow: var(--liq-shadow-sm); }
+.theme-toggle::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%; background: var(--liq-shimmer); border-radius: 99px 99px 0 0; pointer-events: none; }
+.theme-toggle:hover { background: rgba(255,255,255,0.2); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.2); }
+.tab { padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; background: none; color: rgba(255,255,255,0.42); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab.active { color: white; border-bottom-color: white; }
+.section { display: none; } .section.active { display: block; }
+
+/* Timer area */
+.active-task-name { text-align: center; font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.72); margin-bottom: 8px; min-height: 22px; letter-spacing: 0.01em; }
+.timer-display { text-align: center; padding: 0.5rem 0 1.5rem; }
+#timer-svg { display: block; margin: 0 auto; }
+.timer-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+/* Add task row */
+.add-task-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+.add-task-row input { flex: 1; padding: 10px 18px; border: 1px solid var(--liq-border); border-radius: 99px; font-size: 14px; background: var(--input-bg); color: white; outline: none; box-shadow: var(--liq-shadow-sm); position: relative; }
+.add-task-row input::placeholder { color: rgba(255,255,255,0.4); }
+.add-task-row input:focus { border-color: rgba(255,255,255,0.7); }
+.btn-add { position: relative; overflow: hidden; padding: 10px 16px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; color: white; background: var(--liq-bg); border: 1px solid var(--liq-border); box-shadow: var(--liq-shadow-sm); }
+.btn-add::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%; background: var(--liq-shimmer); border-radius: var(--radius-sm) var(--radius-sm) 0 0; pointer-events: none; }
+.btn-add:hover { background: rgba(255,255,255,0.2); }
+
+/* Buttons */
+.controls { display: flex; gap: 8px; justify-content: center; margin-bottom: 1.5rem; }
+.btn { position: relative; overflow: hidden; padding: 10px 26px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; color: white; background: var(--liq-bg); border: 1px solid var(--liq-border); box-shadow: var(--liq-shadow-sm); }
+.btn::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%; background: var(--liq-shimmer); border-radius: var(--radius-sm) var(--radius-sm) 0 0; pointer-events: none; }
+.btn:hover { background: rgba(255,255,255,0.2); }
+.btn:active { transform: scale(0.97); }
+.btn.primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); border-color: rgba(255,255,255,0.8); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 12px rgba(255,255,255,0.12); }
+.btn.primary::after { background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 100%); }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.danger { color: var(--danger); }
+.btn.danger:hover { background: var(--danger-bg); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; filter: none; }
+
+/* Total */
+.today-total { position: relative; overflow: hidden; background: var(--liq-bg); border: 1px solid var(--liq-border); border-radius: var(--radius-sm); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; box-shadow: var(--liq-shadow-sm); }
+.today-total::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%; background: var(--liq-shimmer); border-radius: var(--radius-sm) var(--radius-sm) 0 0; pointer-events: none; }
+.today-total .label { font-size: 13px; color: var(--text2); position: relative; }
+.today-total .val { font-size: 16px; font-weight: 700; color: white; position: relative; }
+
+/* Entry rows */
+.entries-list { display: flex; flex-direction: column; overflow: visible; }
+.entry-card { padding: 12px 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; overflow: visible; position: relative; border-top: 1px solid rgba(255,255,255,0.16); transition: transform 0.15s, opacity 0.15s; }
+.entry-card:first-child { border-top: none; padding-top: 4px; }
+.entry-info { flex: 1; min-width: 0; }
+.entry-name { font-size: 14px; font-weight: 600; overflow: visible; display: flex; align-items: center; flex-wrap: nowrap; gap: 0; }
+.entry-meta { font-size: 12px; margin-top: 2px; opacity: 0.5; }
+.entry-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.entry-time { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Liquid glass icon track button */
+.btn-track { position: relative; overflow: hidden; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.04), 0 2px 6px rgba(60,20,120,0.1); color: white; padding: 0; }
+.btn-track::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.2), transparent); border-radius: 50% 50% 0 0; pointer-events: none; }
+.btn-track:hover { background: rgba(255,255,255,0.28); }
+.btn-track.active-tracking { background: rgba(255,255,255,0.22); }
+
+/* Drag */
+.drag-over { opacity: 0.5; transform: scale(0.98); }
+.drag-handle { cursor: grab; opacity: 0.55; font-size: 14px; padding: 0 8px 0 0; user-select: none; color: white; letter-spacing: 1px; }
+.drag-handle:hover { opacity: 0.85; }
+.drag-handle:active { cursor: grabbing; opacity: 1; }
+
+/* 3-dot menu */
+.btn-dots { background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; color: rgba(255,255,255,0.32); letter-spacing: 1px; font-weight: 700; }
+.btn-dots:hover { color: white; }
+.fm-menu-btn { background: none !important; }
+.fm-menu-btn:hover { background: rgba(255,255,255,0.12) !important; }
+#fm-log-input::-webkit-outer-spin-button, #fm-log-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#fm-log-input { -moz-appearance: textfield; appearance: textfield; text-align: center; }
+
+/* Badges */
+.untracked-badge { font-size: 11px; padding: 3px 8px; border-radius: 99px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.32); box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); color: rgba(255,255,255,0.6); margin-left: 6px; display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; font-weight: 500; position: relative; top: -1px; }
+
+/* History */
+.history-day { margin-bottom: 1.5rem; }
+.history-day-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.history-day-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.06em; }
+.history-day-total { font-size: 13px; font-weight: 700; color: white; }
+.empty { text-align: center; color: rgba(255,255,255,0.42); font-size: 14px; padding: 2.5rem 0; }
+.entry-desc { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.entry-desc:hover { color: rgba(255,255,255,0.7); }
+
+/* Jira picker */
+.jira-picker { margin-bottom: 1rem; }
+.jira-picker-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.jira-tab-btn { padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+.jira-tab-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+.jira-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); color: white; outline: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2); }
+.jira-search-row input::placeholder { color: rgba(255,255,255,0.4); }
+.jira-results { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); transition: background 0.1s; }
+.jira-result-item:hover { background: rgba(255,255,255,0.18); }
+.jira-result-key { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); white-space: nowrap; min-width: 56px; }
+.jira-result-name { font-size: 13px; font-weight: 500; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jira-result-project { font-size: 11px; color: rgba(255,255,255,0.45); white-space: nowrap; }
+.jira-breadcrumb { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: rgba(255,255,255,0.55); flex-wrap: wrap; }
+.jira-breadcrumb span { cursor: pointer; }
+.jira-breadcrumb span:hover { color: white; }
+.jira-loading { text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; padding: 1.5rem 0; }
+.jira-issue-key-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); margin-left: 6px; display: inline-flex; align-items: center; vertical-align: middle; }
+.add-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+.mode-btn { padding: 7px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+.mode-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+
+/* Jira picker */
+.jira-picker { margin-bottom: 1rem; }
+.jira-picker-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.jira-tab-btn { padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+.jira-tab-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+.jira-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); color: white; outline: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2); }
+.jira-search-row input::placeholder { color: rgba(255,255,255,0.4); }
+.jira-results { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); transition: background 0.1s; }
+.jira-result-item:hover { background: rgba(255,255,255,0.18); }
+.jira-result-key { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); white-space: nowrap; min-width: 56px; }
+.jira-result-name { font-size: 13px; font-weight: 500; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jira-result-project { font-size: 11px; color: rgba(255,255,255,0.45); white-space: nowrap; }
+.jira-breadcrumb { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; color: rgba(255,255,255,0.55); flex-wrap: wrap; }
+.jira-breadcrumb span { cursor: pointer; }
+.jira-breadcrumb span:hover { color: white; }
+.jira-loading { text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; padding: 1.5rem 0; }
+.jira-issue-key-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); margin-left: 6px; display: inline-flex; align-items: center; vertical-align: middle; }
+.add-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+.mode-btn { padding: 7px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
+.mode-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+
+/* Weekly */
+.weekly-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+.weekly-nav { display: flex; gap: 6px; align-items: center; }
+.weekly-nav button { position: relative; overflow: hidden; background: var(--liq-bg); border: 1px solid var(--liq-border); border-radius: 99px; padding: 5px 12px; font-size: 13px; font-weight: 600; cursor: pointer; color: white; box-shadow: var(--liq-shadow-sm); }
+.weekly-nav button::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: var(--liq-shimmer); border-radius:99px; pointer-events:none; }
+.weekly-nav button:hover { background: rgba(255,255,255,0.2); }
+.weekly-nav span { font-size: 13px; font-weight: 600; color: white; min-width: 120px; text-align: center; }
+.weekly-total-card { position: relative; overflow: hidden; background: var(--liq-bg); border: 1px solid var(--liq-border); border-radius: var(--radius-sm); padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; box-shadow: var(--liq-shadow-sm); }
+.weekly-total-card::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: var(--liq-shimmer); border-radius:var(--radius-sm) var(--radius-sm) 0 0; pointer-events:none; }
+.weekly-total-card .wlabel { font-size: 13px; color: var(--text2); position: relative; }
+.weekly-total-card .wval { font-size: 20px; font-weight: 700; position: relative; }
+.weekly-bar-wrap { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 8px; }
+.weekly-bar-row { display: flex; align-items: center; gap: 10px; }
+.weekly-bar-day { font-size: 12px; font-weight: 600; color: var(--text2); width: 28px; text-align: right; }
+.weekly-bar-bg { flex: 1; height: 8px; border-radius: 99px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.weekly-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, rgba(200,160,255,0.9), rgba(255,160,200,0.9)); }
+.weekly-bar-val { font-size: 12px; font-weight: 600; color: white; min-width: 44px; text-align: right; }
+.weekly-tasks { display: flex; flex-direction: column; gap: 8px; }
+.weekly-task-row { position: relative; overflow: hidden; background: var(--liq-bg); border: 1px solid var(--liq-border); border-radius: var(--radius-sm); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--liq-shadow-sm); }
+.weekly-task-row::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: var(--liq-shimmer); border-radius:var(--radius-sm) var(--radius-sm) 0 0; pointer-events:none; }
+.weekly-task-name { font-size: 13px; font-weight: 600; color: white; position: relative; }
+.weekly-task-time { font-size: 13px; font-weight: 600; color: white; position: relative; }
+.weekly-section-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.48); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+
+/* Settings */
+.settings-section { position: relative; overflow: hidden; background: var(--liq-bg); border: 1px solid var(--liq-border); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--liq-shadow); }
+.settings-section::after { content:''; position:absolute; top:0; left:0; right:0; height:50px; background: linear-gradient(90deg, rgba(255,160,210,0.05) 0%, rgba(180,140,255,0.07) 25%, rgba(120,190,255,0.05) 50%, rgba(160,255,200,0.03) 75%, rgba(255,220,140,0.04) 100%); border-radius:var(--radius-lg) var(--radius-lg) 0 0; pointer-events:none; }
+.settings-label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; position: relative; }
+.gradient-presets { display: flex; gap: 10px; flex-wrap: wrap; position: relative; margin-bottom: 1.5rem; }
+.preset-swatch {
+  width: 48px; height: 48px; border-radius: 16px; cursor: pointer;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative; overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 3px 10px rgba(0,0,0,0.18);
+}
+.preset-swatch::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: linear-gradient(180deg, rgba(255,255,255,0.22), transparent); border-radius:16px 16px 0 0; pointer-events:none; }
+.preset-swatch:hover { transform: scale(1.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 5px 16px rgba(0,0,0,0.22); }
+.preset-swatch.active { border-color: rgba(255,255,255,0.75); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 2.5px rgba(255,255,255,0.3), 0 4px 12px rgba(0,0,0,0.2); }
+.custom-gradient-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; position: relative; }
+.color-picker-wrap { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.color-label { font-size: 11px; color: rgba(255,255,255,0.48); font-weight: 500; }
+input[type="color"] {
+  width: 48px; height: 48px; border-radius: 16px;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  cursor: pointer; padding: 3px;
+  background: var(--input-bg);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 3px 10px rgba(0,0,0,0.15);
+  position: relative; overflow: hidden;
+}
+.btn-apply-grad {
+  position: relative; overflow: hidden;
+  padding: 10px 22px; border-radius: 99px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  color: var(--btn-primary-text); background: var(--btn-primary-bg);
+  border: 1.5px solid rgba(255,255,255,0.8);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 2px 8px rgba(255,255,255,0.12);
+  align-self: flex-end;
+}
+.btn-apply-grad::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: linear-gradient(180deg, rgba(255,255,255,0.2), transparent); border-radius:99px 99px 0 0; pointer-events:none; }
+.btn-apply-grad:hover { filter: brightness(1.05); }
+</style>
+<script>
+(function(){
+  var saved = localStorage.getItem('tinywatch_theme');
+  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var isDark = saved ? saved === 'dark' : prefersDark;
+  document.documentElement.classList.add(isDark ? 'dark' : 'light');
+})();
+</script>
+</head>
+<body>
+<div class="app"><div class="glass-app">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+    <h1 id="app-title" style="margin-bottom:0;cursor:pointer;user-select:none;" onclick="startEditTitle()" title="Click to rename">LTT — Lucy's Time Tracker</h1>
+    <input id="app-title-input" type="text" maxlength="40" onblur="saveTitle()" onkeydown="if(event.key==='Enter')saveTitle();if(event.key==='Escape')cancelEditTitle();" style="display:none;font-size:18px;font-weight:700;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:99px;color:white;padding:4px 14px;outline:none;width:280px;" />
+    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">Dark</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('tracker')">Timer</button>
+    <button class="tab" onclick="showTab('history')">History</button>
+    <button class="tab" onclick="showTab('weekly')">Weekly</button>
+    <button class="tab" onclick="showTab('settings')">Settings</button>
+  </div>
+
+  <div id="tab-tracker" class="section active">
+    <div class="active-task-name" id="active-task-name"></div>
+    <div class="timer-display">
+      <svg id="timer-svg" width="260" height="72" viewBox="0 0 260 72">
+          <defs>
+            <linearGradient id="tgFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="rgba(255,255,255,0.85)"/>
+              <stop offset="28%"  stop-color="rgba(220,210,255,0.18)"/>
+              <stop offset="62%"  stop-color="rgba(190,175,240,0.07)"/>
+              <stop offset="100%" stop-color="rgba(255,255,255,0.38)"/>
+            </linearGradient>
+            <linearGradient id="tgStroke" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="rgba(255,255,255,0.9)"/>
+              <stop offset="100%" stop-color="rgba(210,195,255,0.2)"/>
+            </linearGradient>
+          </defs>
+          <text id="display" x="50%" y="56" text-anchor="middle"
+            font-family="-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif"
+            font-size="58" font-weight="400" letter-spacing="-1"
+            font-variant-numeric="tabular-nums"
+            fill="url(#tgFill)" stroke="url(#tgStroke)" stroke-width="0.6"
+            paint-order="stroke">00:00:00</text>
+      </svg>
+      <div class="timer-sub" id="running-label">Select a task below</div>
+    </div>
+
+    <div class="add-mode-toggle">
+      <button class="mode-btn active" id="mode-manual" onclick="setAddMode('manual')">Manual</button>
+      <button class="mode-btn" id="mode-jira" onclick="setAddMode('jira')">From Jira</button>
+    </div>
+    <div id="manual-add" class="add-task-row">
+      <input type="text" id="new-task-input" placeholder="Add a task for today..." maxlength="80" onkeydown="if(event.key==='Enter') addTask()" oninput="updateStartBtn()" />
+      <button class="btn-add" onclick="addTask()">+ Add</button>
+    </div>
+    <div id="jira-add" style="display:none;" class="jira-picker">
+      <div class="jira-picker-tabs">
+        <button class="jira-tab-btn active" id="jtab-search" onclick="setJiraTab('search')">Search</button>
+        <button class="jira-tab-btn" id="jtab-browse" onclick="setJiraTab('browse')">Browse</button>
+      </div>
+      <div id="jira-search-pane">
+        <div class="jira-search-row">
+          <input type="text" id="jira-search-input" placeholder="Search issues..." oninput="debounceJiraSearch(this.value)" />
+        </div>
+        <div class="jira-results" id="jira-search-results"><div class="jira-loading">Type to search Jira issues</div></div>
+      </div>
+      <div id="jira-browse-pane" style="display:none;">
+        <div class="jira-breadcrumb" id="jira-breadcrumb"><span onclick="jiraBrowse('projects')">All projects</span></div>
+        <div class="jira-results" id="jira-browse-results"><div class="jira-loading">Loading...</div></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" id="btn-start" onclick="startTimer()" disabled>Start</button>
+      <button class="btn" id="btn-pause" onclick="pauseTimer()" disabled>Pause</button>
+      <button class="btn danger" id="btn-save" onclick="saveEntry()" disabled>Save</button>
+    </div>
+
+    <div class="today-total">
+      <span class="label">Total today</span>
+      <span class="val" id="today-total">0h 00m</span>
+    </div>
+    <div id="today-entries" class="entries-list"></div>
+  </div>
+
+  <div id="tab-history" class="section">
+    <div id="history-list"></div>
+  </div>
+
+  <div id="tab-weekly" class="section">
+    <div id="weekly-content"></div>
+  </div>
+
+  <div id="tab-settings" class="section">
+    <div class="settings-section">
+      <div class="settings-label">Jira connection</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.5rem;position:relative;">
+        <div id="jira-connected-view" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;flex:1;">
+            <span style="font-size:18px;">✓</span>
+            <div>
+              <div id="jira-user-name" style="font-size:13px;font-weight:600;color:white;"></div>
+              <div id="jira-user-email" style="font-size:11px;color:rgba(255,255,255,0.5);"></div>
+            </div>
+          </div>
+          <button onclick="disconnectJira()" style="padding:7px 16px;border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Disconnect</button>
+        </div>
+        <div id="jira-disconnected-view" style="display:flex;flex-direction:column;gap:8px;">
+          <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;">Connect your Atlassian account to search Jira issues and log time directly from LTT.</p>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;">App secret <span style="font-weight:400;opacity:0.7;">(Developer Console → Settings)</span></label>
+            <input type="password" id="jira-secret" placeholder="Paste your app secret..." style="padding:9px 16px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);" />
+          </div>
+          <button onclick="connectJira()" style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);align-self:flex-start;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8S4.41 14.5 8 14.5 14.5 11.59 14.5 8 11.59 1.5 8 1.5zm3.5 8.75h-2.25V12.5h-2.5v-2.25H4.5v-2.5h2.25V5.5h2.5v2.25H11.5v2.5z" fill="#2a0a50"/></svg>
+            Connect to Jira
+          </button>
+          <span id="jira-status" style="font-size:12px;color:rgba(255,255,255,0.55);"></span>
+        </div>
+      </div>
+      <div class="settings-label">Background gradient</div>
+      <div class="gradient-presets" id="gradient-presets"></div>
+      <div class="settings-label" style="margin-top:1.25rem;">Background image URL</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:0.5rem;position:relative;">
+        <input type="url" id="bg-url-input" placeholder="Paste an image URL..." style="flex:1;padding:9px 16px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);" onkeydown="if(event.key==='Enter')applyBgUrl()" />
+        <button onclick="applyBgUrl()" style="padding:9px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);white-space:nowrap;">Apply</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:1.5rem;">
+        <button onclick="removeBgImage()" style="padding:7px 16px;border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.18);">Remove image</button>
+        <span id="bg-url-status" style="font-size:12px;color:rgba(255,255,255,0.45);"></span>
+      </div>
+      <div class="settings-label" style="margin-top:0;">Custom gradient</div>
+      <div class="custom-gradient-row">
+        <div class="color-picker-wrap">
+          <label class="color-label">From</label>
+          <input type="color" id="grad-color1" />
+        </div>
+        <div class="color-picker-wrap">
+          <label class="color-label">Via</label>
+          <input type="color" id="grad-color2" />
+        </div>
+        <div class="color-picker-wrap">
+          <label class="color-label">To</label>
+          <input type="color" id="grad-color3" />
+        </div>
+        <button class="btn-apply-grad" onclick="applyCustomGradient()">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'tinywatch_v3';
+let timerInterval = null;
+let elapsed = 0;
+let startedAt = null;
+let running = false;
+let activeEntryId = null;
+
+// Pastel colors — bg, border-left, text color
+const PASTEL_COLORS = [
+  { bg: 'rgba(255,180,180,0.28)', border: 'rgba(255,160,160,0.55)', bTop: 'rgba(255,220,220,0.8)', text: '#5a1a1a', dbg: 'rgba(255,120,120,0.1)', dborder: 'rgba(255,160,160,0.25)', dbTop: 'rgba(255,200,200,0.3)', dtext: '#ffcece' },
+  { bg: 'rgba(255,180,230,0.28)', border: 'rgba(255,150,210,0.55)', bTop: 'rgba(255,220,245,0.8)', text: '#5a1a50', dbg: 'rgba(255,120,210,0.1)', dborder: 'rgba(255,150,210,0.25)', dbTop: 'rgba(255,200,240,0.3)', dtext: '#ffcef0' },
+  { bg: 'rgba(180,180,255,0.28)', border: 'rgba(150,150,255,0.55)', bTop: 'rgba(220,220,255,0.8)', text: '#1a1a5a', dbg: 'rgba(120,120,255,0.1)', dborder: 'rgba(150,150,255,0.25)', dbTop: 'rgba(200,200,255,0.3)', dtext: '#ceceff' },
+  { bg: 'rgba(180,230,255,0.28)', border: 'rgba(140,210,255,0.55)', bTop: 'rgba(220,245,255,0.8)', text: '#1a505a', dbg: 'rgba(120,210,255,0.1)', dborder: 'rgba(140,210,255,0.25)', dbTop: 'rgba(200,240,255,0.3)', dtext: '#cef0ff' },
+  { bg: 'rgba(180,255,200,0.28)', border: 'rgba(140,240,170,0.55)', bTop: 'rgba(220,255,235,0.8)', text: '#1a5a2a', dbg: 'rgba(120,240,160,0.1)', dborder: 'rgba(140,240,170,0.25)', dbTop: 'rgba(200,255,220,0.3)', dtext: '#ceffda' },
+  { bg: 'rgba(255,230,170,0.28)', border: 'rgba(255,210,130,0.55)', bTop: 'rgba(255,245,210,0.8)', text: '#5a3a0a', dbg: 'rgba(255,200,100,0.1)', dborder: 'rgba(255,210,130,0.25)', dbTop: 'rgba(255,235,180,0.3)', dtext: '#ffecb8' },
+  { bg: 'rgba(210,255,170,0.28)', border: 'rgba(185,245,130,0.55)', bTop: 'rgba(235,255,210,0.8)', text: '#2a5a0a', dbg: 'rgba(180,245,120,0.1)', dborder: 'rgba(185,245,130,0.25)', dbTop: 'rgba(220,255,180,0.3)', dtext: '#dcffb8' },
+  { bg: 'rgba(255,180,210,0.28)', border: 'rgba(255,150,185,0.55)', bTop: 'rgba(255,220,240,0.8)', text: '#5a1a35', dbg: 'rgba(255,120,180,0.1)', dborder: 'rgba(255,150,185,0.25)', dbTop: 'rgba(255,200,230,0.3)', dtext: '#ffcee3' },
+  { bg: 'rgba(180,255,235,0.28)', border: 'rgba(140,245,210,0.55)', bTop: 'rgba(220,255,248,0.8)', text: '#1a5a40', dbg: 'rgba(120,245,200,0.1)', dborder: 'rgba(140,245,210,0.25)', dbTop: 'rgba(200,255,240,0.3)', dtext: '#cefff0' },
+  { bg: 'rgba(220,180,255,0.28)', border: 'rgba(195,150,255,0.55)', bTop: 'rgba(240,220,255,0.8)', text: '#3a1a5a', dbg: 'rgba(180,120,255,0.1)', dborder: 'rgba(195,150,255,0.25)', dbTop: 'rgba(225,200,255,0.3)', dtext: '#e8ceff' },
+  { bg: 'rgba(255,255,255,0.45)', border: 'rgba(255,255,255,0.65)', bTop: 'rgba(255,255,255,0.95)', text: '#2a2a3a', dbg: 'rgba(255,255,255,0.1)', dborder: 'rgba(255,255,255,0.25)', dbTop: 'rgba(255,255,255,0.35)', dtext: '#f0f0ff' },
+];
+
+function isDarkMode() {
+  return document.documentElement.classList.contains('dark') ||
+    (!document.documentElement.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+
+function pickColor(id) {
+  return PASTEL_COLORS[Number(id) % PASTEL_COLORS.length];
+}
+
+function loadEntries() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const all = JSON.parse(raw);
+    if (!Array.isArray(all)) return [];
+    const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+    return all
+      .filter(e => e && e.id !== undefined && e.name !== undefined)
+      .map(e => ({
+        id: Number(e.id),
+        name: String(e.name || 'Unnamed'),
+        ms: Number(e.ms) || 0,
+        ts: Number(e.ts),
+        colorIdx: Number(e.colorIdx) || 0,
+        untracked: !!e.untracked
+      }))
+      .filter(e => !isNaN(e.id) && (e.untracked || (e.ts > cutoff && !isNaN(e.ts))));
+  } catch(err) { return []; }
+}
+
+function saveEntries(entries) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+function fmt(ms) {
+  const t = Math.floor(ms / 1000);
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+function fmtShort(ms) {
+  const t = Math.floor(ms / 1000);
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  if (h > 0) return h + 'h ' + String(m).padStart(2,'0') + 'm';
+  return m + 'm ' + String(s).padStart(2,'0') + 's';
+}
+function fmtTotal(ms) {
+  if (ms < 60000) { return '0h 00m ' + String(Math.floor(ms/1000)).padStart(2,'0') + 's'; }
+  const totalMin = Math.floor(ms / 60000);
+  return Math.floor(totalMin/60) + 'h ' + String(totalMin%60).padStart(2,'0') + 'm';
+}
+function dayKey(ts) {
+  const d = new Date(Number(ts));
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function dayLabel(key) {
+  const today = dayKey(Date.now()), yest = dayKey(Date.now()-86400000);
+  if (key === today) return 'Today';
+  if (key === yest) return 'Yesterday';
+  const p = key.split('-');
+  return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+}
+function timeOfDay(ts) {
+  return new Date(Number(ts)).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var _menuOpenId = null;
+var _menuColorIdx = 0;
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#floating-menu') && !e.target.closest('.btn-dots')) {
+    closeFloatingMenu();
+  }
+});
+
+function showColorPicker(id) {
+  var picker = document.getElementById('fm-color-picker');
+  if (!picker) return;
+  picker.style.display = picker.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function setEntryColor(id, colorIdx) {
+  var entries = loadEntries();
+  var idx = entries.findIndex(function(e) { return e.id === Number(id); });
+  if (idx === -1) return;
+  entries[idx].colorIdx = colorIdx;
+  saveEntries(entries);
+  _menuColorIdx = colorIdx;
+  closeFloatingMenu();
+  renderToday();
+  renderHistory();
+}
+
+function closeFloatingMenu() {
+  var fm = document.getElementById('floating-menu');
+  fm.style.display = 'none';
+  _menuOpenId = null;
+}
+
+function toggleMenu(e, id) {
+  e.stopPropagation();
+  var fm = document.getElementById('floating-menu');
+  if (_menuOpenId === id) { closeFloatingMenu(); return; }
+  _menuOpenId = id;
+  var entries = loadEntries();
+  var entry = entries.find(function(e) { return e.id === Number(id); });
+  _menuColorIdx = entry ? (entry.colorIdx || 0) : 0;
+  var dark = isDarkMode();
+  fm.style.background = 'rgba(255,255,255,' + (dark ? '0.12' : '0.55') + ')';
+  fm.style.border = '1px solid rgba(255,255,255,' + (dark ? '0.14' : '0.28') + ')';
+  fm.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,' + (dark ? '0.18' : '0.38') + '), 0 8px 32px rgba(' + (dark ? '0,0,0,0.45' : '40,10,100,0.15') + ')';
+  var entryForMenu = loadEntries().find(function(e) { return e.id === Number(id); });
+  var hasJira = entryForMenu && entryForMenu.jiraKey && !entryForMenu.jiraSent;
+  var isSent = entryForMenu && entryForMenu.jiraSent;
+  fm.innerHTML =
+    '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.88);font-weight:400;font-family:inherit" class="fm-menu-btn" onclick="showLogForm(' + id + ')">Add time manually</button>' +
+    '<div id="fm-log-form" style="display:none;padding:10px 16px 12px;border-top:1px solid rgba(255,255,255,0.15);gap:6px;align-items:center">' +
+      '<input type="number" min="1" id="fm-log-input" placeholder="min" style="width:64px;padding:5px 8px;border:1px solid rgba(255,255,255,0.35);border-radius:99px;font-size:13px;background:rgba(255,255,255,0.2);color:white;outline:none;-moz-appearance:textfield;appearance:textfield" />' +
+      '<span style="font-size:12px;color:rgba(255,255,255,0.55);white-space:nowrap">min</span>' +
+      '<button onclick="submitLog(' + id + ')" style="padding:5px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);color:#2a0a50;font-family:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,0.5)">Add</button>' +
+    '</div>' +
+
+    (hasJira ? '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(160,255,180,0.9);font-weight:500;font-family:inherit" class="fm-menu-btn" onclick="showSendToJiraDialog(' + id + ')">Send to Jira</button>' : '') +
+    (hasJira ? '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.88);font-weight:400;font-family:inherit" class="fm-menu-btn" onclick="editJiraDesc(' + id + ')">Edit description</button>' : '') +
+    (isSent ? '<div style="padding:8px 16px;font-size:12px;color:rgba(160,255,180,0.7);">✓ Sent to Jira</div>' : '') +
+    '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.88);font-weight:400;font-family:inherit" class="fm-menu-btn" onclick="deleteEntry(' + id + ')">Delete task</button>';
+  var shimmer = document.createElement('div');
+  shimmer.style.cssText = 'position:absolute;top:0;left:0;right:0;height:40px;background:linear-gradient(180deg,rgba(255,255,255,' + (dark?'0.07':'0.15') + '),transparent);border-radius:14px 14px 0 0;pointer-events:none;z-index:0';
+  fm.appendChild(shimmer);
+  var topLine = document.createElement('div');
+  topLine.style.cssText = 'position:absolute;top:0;left:0;right:0;height:1px;background:rgba(255,255,255,' + (dark?'0.2':'0.45') + ');border-radius:14px 14px 0 0;pointer-events:none;z-index:1';
+  fm.appendChild(topLine);
+  var btn = e.target.closest('.btn-dots');
+  var rect = btn.getBoundingClientRect();
+  var fmWidth = 188;
+  var left = Math.min(rect.right - fmWidth, window.innerWidth - fmWidth - 8);
+  fm.style.left = Math.max(8, left) + 'px';
+  fm.style.top = (rect.bottom + 6) + 'px';
+  fm.style.display = 'block';
+}
+
+function showLogForm(id) {
+  var form = document.getElementById('fm-log-form');
+  if (!form) return;
+  form.style.display = form.style.display === 'flex' ? 'none' : 'flex';
+  var input = document.getElementById('fm-log-input');
+  if (input) setTimeout(function() {
+    input.focus();
+    input.onkeydown = function(ev) { if (ev.key === 'Enter') submitLog(id); };
+  }, 50);
+}
+
+function submitLog(id) {
+  var input = document.getElementById('fm-log-input');
+  if (!input) return;
+  var mins = parseInt(input.value, 10);
+  if (isNaN(mins) || mins <= 0) return;
+  var entries = loadEntries();
+  var idx = entries.findIndex(function(e) { return e.id === Number(id); });
+  if (idx === -1) return;
+  entries[idx].ms = (entries[idx].ms || 0) + mins * 60000;
+  entries[idx].untracked = false;
+  if (!entries[idx].ts) entries[idx].ts = Date.now();
+  saveEntries(entries);
+  closeFloatingMenu();
+  renderToday();
+  renderHistory();
+}
+
+function tick() {
+  elapsed = Date.now() - startedAt;
+  document.getElementById('display').textContent = fmt(elapsed);
+}
+
+function setActiveTaskLabel(name) {
+  const el = document.getElementById('active-task-name');
+  el.textContent = name || '';
+}
+
+function updateStartBtn() {
+  var input = document.getElementById('new-task-input');
+  var btnStart = document.getElementById('btn-start');
+  if (!btnStart) return;
+  // enable if there's text in input OR there's already an active entry
+  if (activeEntryId !== null) return; // already tracking, don't touch
+  btnStart.disabled = !input.value.trim();
+}
+
+function startTimer() {
+  if (running) return;
+  // If no active entry but there's text in the input, add task and start it
+  if (activeEntryId === null) {
+    const input = document.getElementById('new-task-input');
+    const name = input.value.trim();
+    if (!name) return;
+    const entries = loadEntries();
+    const todayKey = dayKey(Date.now());
+    const todayCount = entries.filter(e => dayKey(e.ts || Date.now()) === todayKey).length;
+    const colorIdx = todayCount % PASTEL_COLORS.length;
+    const id = Date.now();
+    const newEntry = { id, name, ms: 0, ts: Date.now(), colorIdx, untracked: true };
+    entries.push(newEntry);
+    saveEntries(entries);
+    input.value = '';
+    activeEntryId = id;
+    setActiveTaskLabel(name);
+    elapsed = 0; startedAt = null;
+    document.getElementById('display').textContent = '00:00:00';
+    document.getElementById('running-label').textContent = 'Ready';
+  }
+  running = true;
+  startedAt = Date.now() - elapsed;
+  timerInterval = setInterval(tick, 500);
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-pause').disabled = false;
+  document.getElementById('btn-save').disabled = false;
+  document.getElementById('running-label').textContent = 'Running...';
+  renderToday();
+}
+
+function pauseTimer() {
+  if (!running) return;
+  running = false;
+  clearInterval(timerInterval);
+  document.getElementById('btn-start').textContent = 'Resume';
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-pause').disabled = true;
+  document.getElementById('running-label').textContent = 'Paused';
+}
+
+function resetTimer(keepActive) {
+  running = false;
+  clearInterval(timerInterval);
+  elapsed = 0; startedAt = null;
+  if (!keepActive) { activeEntryId = null; setActiveTaskLabel(''); }
+  document.getElementById('display').textContent = '00:00:00';
+  document.getElementById('btn-start').textContent = 'Start';
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-pause').disabled = true;
+  document.getElementById('btn-save').disabled = true;
+  document.getElementById('running-label').textContent = activeEntryId ? 'Ready' : 'Type a task name or select one below';
+}
+
+function addTask() {
+  const input = document.getElementById('new-task-input');
+  const name = input.value.trim();
+  if (!name) return;
+  const entries = loadEntries();
+  const todayKey = dayKey(Date.now());
+  // assign color based on how many tasks exist today
+  const todayCount = entries.filter(e => dayKey(e.ts || Date.now()) === todayKey || e.untracked).length;
+  const colorIdx = todayCount % PASTEL_COLORS.length;
+  const id = Date.now();
+  entries.push({ id, name, ms: 0, ts: Date.now(), colorIdx, untracked: true });
+  saveEntries(entries);
+  input.value = '';
+  renderToday();
+}
+
+function trackEntry(id) {
+  const numId = Number(id);
+
+  // Block tracking on Jira-sent entries
+  var entryCheck = loadEntries().find(function(e) { return e.id === numId; });
+  if (entryCheck && entryCheck.jiraSent) return;
+
+  // Clicking the already-active task: toggle pause/resume
+  if (activeEntryId === numId) {
+    if (running) {
+      _flushActiveTime();
+      pauseTimer();
+    } else {
+      startTimer();
+    }
+    renderToday();
+    return;
+  }
+
+  // Switching to a different task: flush + pause current, then start new
+  if (running && activeEntryId !== null) {
+    _flushActiveTime();
+    pauseTimer();
+  }
+
+  const entries = loadEntries();
+  const entry = entries.find(e => e.id === numId);
+  if (!entry) return;
+
+  elapsed = 0;
+  startedAt = null;
+  activeEntryId = entry.id;
+  setActiveTaskLabel(entry.name);
+  document.getElementById('display').textContent = '00:00:00';
+  document.getElementById('btn-start').textContent = 'Start';
+  document.getElementById('running-label').textContent = 'Ready';
+  document.getElementById('btn-save').disabled = false;
+  renderToday();
+  startTimer();
+}
+
+function _flushActiveTime() {
+  if (activeEntryId === null || elapsed < 500) return;
+  const entries = loadEntries();
+  const idx = entries.findIndex(e => e.id === activeEntryId);
+  if (idx === -1) return;
+  entries[idx].ms = (entries[idx].ms || 0) + Math.floor(elapsed);
+  entries[idx].untracked = false;
+  entries[idx].ts = Date.now();
+  saveEntries(entries);
+  elapsed = 0;
+}
+
+function saveEntry() {
+  if (activeEntryId === null) return;
+  _flushActiveTime();
+  running = false;
+  clearInterval(timerInterval);
+  activeEntryId = null;
+  elapsed = 0; startedAt = null;
+  setActiveTaskLabel('');
+  document.getElementById('display').textContent = '00:00:00';
+  document.getElementById('btn-start').textContent = 'Start';
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-pause').disabled = true;
+  document.getElementById('btn-save').disabled = true;
+  document.getElementById('running-label').textContent = 'Select a task below';
+  renderToday();
+}
+
+function deleteEntry(id) {
+  if (activeEntryId === Number(id)) { resetTimer(false); }
+  saveEntries(loadEntries().filter(e => e.id !== Number(id)));
+  closeFloatingMenu();
+  renderToday();
+  renderHistory();
+}
+
+function renderToday() {
+  const entries = loadEntries();
+  const todayKey = dayKey(Date.now());
+  const todayEntries = entries.filter(e => dayKey(e.ts) === todayKey).sort((a,b) => { if (a.sortOrder !== undefined && b.sortOrder !== undefined) return a.sortOrder - b.sortOrder; return b.id - a.id; });
+  const totalMs = todayEntries.reduce((sum, e) => sum + (e.ms||0), 0);
+  document.getElementById('today-total').textContent = fmtTotal(totalMs);
+
+  const el = document.getElementById('today-entries');
+  if (todayEntries.length === 0) {
+    el.innerHTML = '<div class="empty">Add a task above to get started</div>';
+    return;
+  }
+
+  el.innerHTML = todayEntries.map(function(e) {
+    const dark = isDarkMode();
+    const cardBg = 'transparent';
+    const cardBorder = 'rgba(255,255,255,0.16)';
+    const cardBTop = 'rgba(255,255,255,0.16)';
+    const cardText = 'rgba(255,255,255,1)';
+    const isActive = e.id === activeEntryId;
+    var isSentToJira = e.jiraSent;
+    const trackIcon = isSentToJira
+    ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5.5L3.5 7.5L8.5 2.5" stroke="rgba(160,255,180,0.9)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : (isActive
+      ? (running
+        ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1.5" y="1.5" width="2.5" height="7" rx="1" fill="white"/><rect x="6" y="1.5" width="2.5" height="7" rx="1" fill="white"/></svg>'
+        : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>')
+      : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>');
+    const timeDisplay = e.ms > 0 ? fmtShort(e.ms) : '';
+    return '<div class="entry-card" draggable="true" data-id="' + e.id + '">' +
+      '<span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>' +
+      '<div class="entry-info">' +
+        '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' + esc(e.jiraSummary || e.name) : esc(e.name)) + (e.untracked && e.ms === 0 ? '<span class="untracked-badge">planned</span>' : '') + '</div>' +
+        (e.jiraKey && !e.jiraSent ? '<div class="entry-desc" onclick="editJiraDescInline(' + e.id + ')">' + (e.jiraDesc ? esc(e.jiraDesc) : '<span style="opacity:0.4">Add description...</span>') + '</div>' : '') +
+        (e.jiraKey && e.jiraSent ? '<div class="entry-desc" style="opacity:0.5;">' + (e.jiraDesc ? esc(e.jiraDesc) : '') + ' <span style="color:rgba(160,255,180,0.8)">✓ Sent</span></div>' : '') +
+        (e.ms > 0 ? '<div class="entry-meta">Last tracked ' + timeOfDay(e.ts) + '</div>' : '') +
+      '</div>' +
+      '<div class="entry-actions">' +
+        '<span class="entry-time">' + timeDisplay + '</span>' +
+        '<button class="btn-track' + (isActive ? ' active-tracking' : '') + '" onclick="trackEntry(' + e.id + ')" style="border-color:rgba(255,255,255,0.5);" ' + (isSentToJira ? 'title="Sent to Jira" style="border-color:rgba(160,255,180,0.4);background:rgba(160,255,180,0.1);cursor:default;pointer-events:none;"' : '') + '>' + trackIcon + '</button>' +
+        '<button class="btn-dots" onclick="toggleMenu(event,' + e.id + ')">&#8943;</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  initDragDrop();
+}
+
+function renderHistory() {
+  const entries = loadEntries();
+  const tracked = entries.filter(e => !e.untracked || e.ms > 0);
+  const byDay = {};
+  tracked.forEach(function(e) {
+    const k = dayKey(e.ts);
+    if (!byDay[k]) byDay[k] = [];
+    byDay[k].push(e);
+  });
+  const days = Object.keys(byDay).sort(function(a,b){ return b.localeCompare(a); });
+  const el = document.getElementById('history-list');
+  if (days.length === 0) { el.innerHTML = '<div class="empty">No history yet — start tracking!</div>'; return; }
+  el.innerHTML = days.map(function(day) {
+    const dayEntries = byDay[day].sort(function(a,b){ return b.ts - a.ts; });
+    const total = dayEntries.reduce(function(s,e){ return s + (e.ms||0); }, 0);
+    const rows = dayEntries.map(function(e) {
+      const dark = isDarkMode();
+    const cardBg = 'transparent';
+    const cardBorder = 'rgba(255,255,255,0.16)';
+    const cardBTop = 'rgba(255,255,255,0.16)';
+    const cardText = 'rgba(255,255,255,1)';
+      return '<div class="entry-card" draggable="true" data-id="' + e.id + '">' +
+        '<div class="entry-info">' +
+          '<div class="entry-name">' + esc(e.name) + '</div>' +
+          '<div class="entry-meta">' + timeOfDay(e.ts) + '</div>' +
+        '</div>' +
+        '<div class="entry-actions">' +
+          '<span class="entry-time">' + fmtShort(e.ms) + '</span>' +
+          '<button class="btn-dots" onclick="toggleMenu(event,' + e.id + ')">&#8943;</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    return '<div class="history-day">' +
+      '<div class="history-day-header">' +
+        '<span class="history-day-label">' + dayLabel(day) + '</span>' +
+        '<span class="history-day-total">' + fmtTotal(total) + '</span>' +
+      '</div>' +
+      '<div class="entries-list">' + rows + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function showTab(name) {
+  var tabs = ['tracker','history','weekly','settings'];
+  document.querySelectorAll('.tab').forEach(function(t,i) {
+    t.classList.toggle('active', tabs[i] === name);
+  });
+  tabs.forEach(function(t) {
+    document.getElementById('tab-' + t).classList.toggle('active', t === name);
+  });
+  if (name === 'history') renderHistory();
+  if (name === 'weekly') renderWeekly();
+  if (name === 'settings') renderSettings();
+}
+
+
+
+// ---- JIRA INTEGRATION ----
+var JIRA_SITE = 'digismoothie.atlassian.net';
+
+function jiraAuthHeader() {
+  var email = localStorage.getItem('jira_email') || '';
+  var token = localStorage.getItem('jira_token') || '';
+  return 'Basic ' + btoa(email + ':' + token);
+}
+
+function saveJiraCredentials() {
+  var email = document.getElementById('jira-email').value.trim();
+  var token = document.getElementById('jira-token').value.trim();
+  var status = document.getElementById('jira-status');
+  if (!email || !token) {
+    status.textContent = 'Please enter both email and token.';
+    status.style.color = 'rgba(255,160,160,0.9)';
+    return;
+  }
+  localStorage.setItem('jira_email', email);
+  localStorage.setItem('jira_token', token);
+  status.textContent = 'Testing connection...';
+  status.style.color = 'rgba(255,255,255,0.55)';
+  testJiraConnection(function(ok, msg) {
+    status.textContent = msg;
+    status.style.color = ok ? 'rgba(160,255,180,0.9)' : 'rgba(255,160,160,0.9)';
+  });
+}
+
+function clearJiraCredentials() {
+  localStorage.removeItem('jira_email');
+  localStorage.removeItem('jira_token');
+  var email = document.getElementById('jira-email');
+  var token = document.getElementById('jira-token');
+  if (email) email.value = '';
+  if (token) token.value = '';
+  var status = document.getElementById('jira-status');
+  if (status) { status.textContent = 'Credentials cleared.'; status.style.color = 'rgba(255,255,255,0.55)'; }
+}
+
+function testJiraConnection(cb) {
+  fetch('https://' + JIRA_SITE + '/rest/api/3/myself', {
+    headers: {
+      'Authorization': jiraAuthHeader(),
+      'Accept': 'application/json'
+    }
+  })
+  .then(function(r) {
+    if (r.ok) return r.json().then(function(d) { cb(true, '✓ Connected as ' + (d.displayName || d.emailAddress)); });
+    else cb(false, '✗ Auth failed — check email and token.');
+  })
+  .catch(function() { cb(false, '✗ Connection error — check your network.'); });
+}
+
+function loadJiraCredentials() {
+  var email = localStorage.getItem('jira_email');
+  var token = localStorage.getItem('jira_token');
+  var emailEl = document.getElementById('jira-email');
+  var tokenEl = document.getElementById('jira-token');
+  if (email && emailEl) emailEl.value = email;
+  if (token && tokenEl) tokenEl.value = token;
+  if (email && token) {
+    var status = document.getElementById('jira-status');
+    if (status) { status.textContent = '✓ Credentials saved'; status.style.color = 'rgba(160,255,180,0.9)'; }
+  }
+}
+
+function isJiraConnected() {
+  return !!(localStorage.getItem('jira_email') && localStorage.getItem('jira_token'));
+}
+
+// ---- Title editing
+function startEditTitle() {
+  var h1 = document.getElementById('app-title');
+  var input = document.getElementById('app-title-input');
+  if (!h1 || !input) return;
+  input.value = h1.textContent;
+  h1.style.display = 'none';
+  input.style.display = 'inline-block';
+  input.focus();
+  input.select();
+}
+function saveTitle() {
+  var h1 = document.getElementById('app-title');
+  var input = document.getElementById('app-title-input');
+  if (!h1 || !input) return;
+  var val = input.value.trim();
+  if (val) {
+    h1.textContent = val;
+    localStorage.setItem('ltt_title', val);
+  }
+  input.style.display = 'none';
+  h1.style.display = '';
+}
+function cancelEditTitle() {
+  var h1 = document.getElementById('app-title');
+  var input = document.getElementById('app-title-input');
+  if (!h1 || !input) return;
+  input.style.display = 'none';
+  h1.style.display = '';
+}
+function loadTitle() {
+  var saved = localStorage.getItem('ltt_title');
+  if (saved) {
+    var h1 = document.getElementById('app-title');
+    if (h1) h1.textContent = saved;
+  }
+}
+
+// Background image
+function handleBgUpload(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var dataUrl = e.target.result;
+    applyBgImage(dataUrl);
+    localStorage.setItem('ltt_bg_image', dataUrl);
+    var label = document.getElementById('bg-filename');
+    if (label) label.textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+function applyBgImage(dataUrl) {
+  document.body.style.backgroundImage = 'url(' + dataUrl + ')';
+  document.body.style.backgroundSize = 'cover';
+  document.body.style.backgroundPosition = 'center';
+  document.body.style.backgroundAttachment = 'fixed';
+}
+function removeBgImage() {
+  document.body.style.backgroundImage = '';
+  document.body.style.backgroundSize = '';
+  document.body.style.backgroundPosition = '';
+  localStorage.removeItem('ltt_bg_image');
+  var label = document.getElementById('bg-filename');
+  if (label) label.textContent = '';
+  var input = document.getElementById('bg-upload');
+  if (input) input.value = '';
+}
+function loadBgImage() {
+  var saved = localStorage.getItem('ltt_bg_image');
+  if (saved) applyBgImage(saved);
+}
+
+// ---- JIRA INTEGRATION (OAuth 2.0 PKCE) ----
+var JIRA_CLIENT_ID = 'dwD4aPYHdf9kXcnLDm3lqJhHIuJYoVUf';
+var JIRA_REDIRECT_URI = 'https://luciadvorakova.github.io/ltt/';
+var JIRA_SCOPES = 'read:jira-work write:jira-work read:jira-user offline_access';
+var JIRA_SITE = 'digismoothie.atlassian.net';
+
+// PKCE helpers
+function base64urlEncode(buffer) {
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+async function generateCodeVerifier() {
+  var array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return base64urlEncode(array);
+}
+async function generateCodeChallenge(verifier) {
+  var encoder = new TextEncoder();
+  var data = encoder.encode(verifier);
+  var digest = await crypto.subtle.digest('SHA-256', data);
+  return base64urlEncode(digest);
+}
+
+async function connectJira() {
+  var secretEl = document.getElementById('jira-secret');
+  var secret = secretEl ? secretEl.value.trim() : '';
+  if (!secret) {
+    var st = document.getElementById('jira-status');
+    if (st) { st.textContent = 'Please enter your app secret first.'; st.style.color = 'rgba(255,160,160,0.9)'; }
+    return;
+  }
+  localStorage.setItem('jira_client_secret', secret);
+  var verifier = await generateCodeVerifier();
+  var challenge = await generateCodeChallenge(verifier);
+  localStorage.setItem('jira_pkce_verifier', verifier);
+  var state = base64urlEncode(crypto.getRandomValues(new Uint8Array(16)));
+  localStorage.setItem('jira_oauth_state', state);
+  var url = 'https://auth.atlassian.com/authorize' +
+    '?audience=api.atlassian.com' +
+    '&client_id=' + JIRA_CLIENT_ID +
+    '&scope=' + encodeURIComponent(JIRA_SCOPES) +
+    '&redirect_uri=' + encodeURIComponent(JIRA_REDIRECT_URI) +
+    '&state=' + state +
+    '&response_type=code' +
+    '&prompt=consent' +
+    '&code_challenge=' + challenge +
+    '&code_challenge_method=S256';
+  window.location.href = url;
+}
+
+async function handleOAuthCallback() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  var state = params.get('state');
+  if (!code) return;
+  var savedState = localStorage.getItem('jira_oauth_state');
+  if (state !== savedState) { console.error('OAuth state mismatch'); return; }
+  var verifier = localStorage.getItem('jira_pkce_verifier');
+  // Exchange code for token
+  var status = document.getElementById('jira-status');
+  if (status) { status.textContent = 'Connecting to Jira...'; status.style.color = 'rgba(255,255,255,0.55)'; }
+  try {
+    var clientSecret = localStorage.getItem('jira_client_secret') || '';
+    var resp = await fetch('https://auth.atlassian.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        client_id: JIRA_CLIENT_ID,
+        client_secret: clientSecret,
+        code: code,
+        redirect_uri: JIRA_REDIRECT_URI,
+        code_verifier: verifier
+      })
+    });
+    if (!resp.ok) {
+      var errBody = await resp.text();
+      console.error('Token exchange error body:', errBody);
+      throw new Error('Token exchange failed: ' + errBody);
+    }
+    var data = await resp.json();
+    localStorage.setItem('jira_access_token', data.access_token);
+    if (data.refresh_token) localStorage.setItem('jira_refresh_token', data.refresh_token);
+    localStorage.setItem('jira_token_expiry', Date.now() + (data.expires_in * 1000));
+    // Clean URL
+    window.history.replaceState({}, document.title, JIRA_REDIRECT_URI);
+    // Get cloud ID and user info
+    await fetchJiraCloudId();
+    await fetchJiraUserInfo();
+    updateJiraUI();
+  } catch(e) {
+    console.error('OAuth error:', e);
+    if (status) { status.textContent = '✗ Connection failed. Please try again.'; status.style.color = 'rgba(255,160,160,0.9)'; }
+  }
+}
+
+async function refreshJiraToken() {
+  var refresh = localStorage.getItem('jira_refresh_token');
+  if (!refresh) return false;
+  try {
+    var resp = await fetch('https://auth.atlassian.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'refresh_token',
+        client_id: JIRA_CLIENT_ID,
+        client_secret: localStorage.getItem('jira_client_secret') || '',
+        refresh_token: refresh
+      })
+    });
+    if (!resp.ok) return false;
+    var data = await resp.json();
+    localStorage.setItem('jira_access_token', data.access_token);
+    if (data.refresh_token) localStorage.setItem('jira_refresh_token', data.refresh_token);
+    localStorage.setItem('jira_token_expiry', Date.now() + (data.expires_in * 1000));
+    return true;
+  } catch(e) { return false; }
+}
+
+async function jiraFetch(path, options) {
+  var expiry = parseInt(localStorage.getItem('jira_token_expiry') || '0');
+  if (Date.now() > expiry - 60000) await refreshJiraToken();
+  var token = localStorage.getItem('jira_access_token');
+  var cloudId = localStorage.getItem('jira_cloud_id');
+  var base = 'https://api.atlassian.com/ex/jira/' + cloudId;
+  var opts = options || {};
+  opts.headers = Object.assign({ 'Authorization': 'Bearer ' + token, 'Accept': 'application/json', 'Content-Type': 'application/json' }, opts.headers || {});
+  return fetch(base + path, opts);
+}
+
+async function fetchJiraCloudId() {
+  var token = localStorage.getItem('jira_access_token');
+  var resp = await fetch('https://api.atlassian.com/oauth/token/accessible-resources', {
+    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
+  });
+  var sites = await resp.json();
+  var site = sites.find(function(s) { return s.url.includes(JIRA_SITE); }) || sites[0];
+  if (site) {
+    localStorage.setItem('jira_cloud_id', site.id);
+    localStorage.setItem('jira_site_name', site.name);
+  }
+}
+
+async function fetchJiraUserInfo() {
+  var resp = await jiraFetch('/rest/api/3/myself');
+  var user = await resp.json();
+  localStorage.setItem('jira_user_name', user.displayName || '');
+  localStorage.setItem('jira_user_email', user.emailAddress || '');
+  localStorage.setItem('jira_account_id', user.accountId || '');
+}
+
+function isJiraConnected() {
+  return !!(localStorage.getItem('jira_access_token') && localStorage.getItem('jira_cloud_id'));
+}
+
+function disconnectJira() {
+  ['jira_access_token','jira_refresh_token','jira_token_expiry','jira_cloud_id','jira_site_name','jira_user_name','jira_user_email','jira_account_id','jira_pkce_verifier','jira_oauth_state','jira_client_secret'].forEach(function(k) { localStorage.removeItem(k); });
+  updateJiraUI();
+}
+
+function updateJiraUI() {
+  var connected = isJiraConnected();
+  var connView = document.getElementById('jira-connected-view');
+  var discView = document.getElementById('jira-disconnected-view');
+  if (connView) connView.style.display = connected ? 'flex' : 'none';
+  if (discView) discView.style.display = connected ? 'none' : 'flex';
+  if (connected) {
+    var nameEl = document.getElementById('jira-user-name');
+    var emailEl = document.getElementById('jira-user-email');
+    if (nameEl) nameEl.textContent = localStorage.getItem('jira_user_name') || 'Connected';
+    if (emailEl) emailEl.textContent = localStorage.getItem('jira_user_email') || '';
+  }
+}
+
+function loadJiraCredentials() {
+  var secret = localStorage.getItem('jira_client_secret');
+  var secretEl = document.getElementById('jira-secret');
+  if (secret && secretEl) secretEl.value = secret;
+  updateJiraUI();
+}
+
+// Title editing
+function startEditTitle() {
+  var h1 = document.getElementById('app-title');
+  var inp = document.getElementById('app-title-input');
+  if (!h1 || !inp) return;
+  inp.value = h1.textContent;
+  h1.style.display = 'none';
+  inp.style.display = 'inline-block';
+  inp.focus(); inp.select();
+}
+function saveTitle() {
+  var h1 = document.getElementById('app-title');
+  var inp = document.getElementById('app-title-input');
+  if (!h1 || !inp) return;
+  var val = inp.value.trim();
+  if (val) { h1.textContent = val; localStorage.setItem('ltt_title', val); }
+  inp.style.display = 'none'; h1.style.display = '';
+}
+function cancelEditTitle() {
+  var h1 = document.getElementById('app-title');
+  var inp = document.getElementById('app-title-input');
+  if (!h1 || !inp) return;
+  inp.style.display = 'none'; h1.style.display = '';
+}
+function loadTitle() {
+  var saved = localStorage.getItem('ltt_title');
+  if (saved) { var h1 = document.getElementById('app-title'); if (h1) h1.textContent = saved; }
+}
+
+// Background image
+function applyBgUrl() {
+  var input = document.getElementById('bg-url-input');
+  var status = document.getElementById('bg-url-status');
+  if (!input) return;
+  var url = input.value.trim();
+  if (!url) return;
+  // Test if image loads
+  var img = new Image();
+  img.onload = function() {
+    applyBgImage(url);
+    localStorage.setItem('ltt_bg_image', url);
+    if (status) status.textContent = 'Applied!';
+    setTimeout(function() { if (status) status.textContent = ''; }, 2000);
+  };
+  img.onerror = function() {
+    if (status) { status.textContent = 'Could not load image — check the URL'; status.style.color = 'rgba(255,160,160,0.8)'; }
+    setTimeout(function() { if (status) { status.textContent = ''; status.style.color = 'rgba(255,255,255,0.45)'; } }, 3000);
+  };
+  img.src = url;
+}
+function applyBgImage(url) {
+  document.body.style.backgroundImage = 'url(' + url + ')';
+  document.body.style.backgroundSize = 'cover';
+  document.body.style.backgroundPosition = 'center';
+  document.body.style.backgroundAttachment = 'fixed';
+}
+function removeBgImage() {
+  document.body.style.backgroundImage = '';
+  localStorage.removeItem('ltt_bg_image');
+  var inp = document.getElementById('bg-url-input');
+  if (inp) inp.value = '';
+  var status = document.getElementById('bg-url-status');
+  if (status) status.textContent = '';
+}
+function loadBgImage() {
+  var saved = localStorage.getItem('ltt_bg_image');
+  if (saved) {
+    applyBgImage(saved);
+    var inp = document.getElementById('bg-url-input');
+    if (inp) inp.value = saved;
+  }
+}
+
+// Grain noise overlay
+(function() {
+  var size = 128;
+  var c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  var ctx = c.getContext('2d');
+  var img = ctx.createImageData(size, size);
+  for (var i = 0; i < img.data.length; i += 4) {
+    var v = Math.random() * 255 | 0;
+    img.data[i] = v; img.data[i+1] = v; img.data[i+2] = v; img.data[i+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  var dataUrl = c.toDataURL('image/png');
+  var overlay = document.getElementById('grain-overlay');
+  if (overlay) {
+    overlay.style.backgroundImage = 'url(' + dataUrl + ')';
+    var savedNoise = localStorage.getItem('ltt_noise');
+    var noiseVal = savedNoise !== null ? parseFloat(savedNoise) / 100 : 0.08;
+    overlay.style.opacity = noiseVal.toFixed(2);
+  }
+  window._grainDataUrl = dataUrl;
+})();
+
+// Theme init (class already set in <head> — just update button)
+(function() {
+  var isDark = document.documentElement.classList.contains('dark');
+  updateThemeBtn(isDark);
+  updateTimerGradients(isDark);
+})();
+
+function updateThemeBtn(isDark) {
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = isDark ? 'Light' : 'Dark';
+}
+
+function updateTimerGradients(isDark) {
+  var fill = document.getElementById('tgFill');
+  var stroke = document.getElementById('tgStroke');
+  if (!fill || !stroke) return;
+  if (isDark) {
+    fill.children[0].setAttribute('stop-color','rgba(255,255,255,0.65)');
+    fill.children[1].setAttribute('stop-color','rgba(180,165,230,0.14)');
+    fill.children[2].setAttribute('stop-color','rgba(140,125,200,0.06)');
+    fill.children[3].setAttribute('stop-color','rgba(210,200,255,0.28)');
+    stroke.children[0].setAttribute('stop-color','rgba(255,255,255,0.72)');
+    stroke.children[1].setAttribute('stop-color','rgba(160,145,220,0.18)');
+  } else {
+    fill.children[0].setAttribute('stop-color','rgba(255,255,255,0.85)');
+    fill.children[1].setAttribute('stop-color','rgba(220,210,255,0.18)');
+    fill.children[2].setAttribute('stop-color','rgba(190,175,240,0.07)');
+    fill.children[3].setAttribute('stop-color','rgba(255,255,255,0.38)');
+    stroke.children[0].setAttribute('stop-color','rgba(255,255,255,0.9)');
+    stroke.children[1].setAttribute('stop-color','rgba(210,195,255,0.2)');
+  }
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  if (isDark) {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.add('light');
+    localStorage.setItem('tinywatch_theme', 'light');
+    updateThemeBtn(false);
+    updateTimerGradients(false);
+  } else {
+    document.documentElement.classList.remove('light');
+    document.documentElement.classList.add('dark');
+    localStorage.setItem('tinywatch_theme', 'dark');
+    updateThemeBtn(true);
+    updateTimerGradients(true);
+  }
+  renderToday();
+  renderHistory();
+}
+
+// ---- JIRA PICKER ----
+var _addMode = 'manual';
+var _jiraTab = 'search';
+var _jiraSearchTimer = null;
+var _jiraBrowseState = { level: 'projects', projectKey: null, projectName: '' };
+
+function setAddMode(mode) {
+  _addMode = mode;
+  document.getElementById('manual-add').style.display = mode === 'manual' ? 'flex' : 'none';
+  document.getElementById('jira-add').style.display = mode === 'jira' ? 'block' : 'none';
+  document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
+  document.getElementById('mode-jira').classList.toggle('active', mode === 'jira');
+  if (mode === 'jira') {
+    if (!isJiraConnected()) {
+      document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Please connect to Jira in Settings first.</div>';
+      return;
+    }
+    if (_jiraTab === 'browse') jiraBrowse('projects');
+  }
+}
+
+function setJiraTab(tab) {
+  _jiraTab = tab;
+  document.getElementById('jtab-search').classList.toggle('active', tab === 'search');
+  document.getElementById('jtab-browse').classList.toggle('active', tab === 'browse');
+  document.getElementById('jira-search-pane').style.display = tab === 'search' ? 'block' : 'none';
+  document.getElementById('jira-browse-pane').style.display = tab === 'browse' ? 'block' : 'none';
+  if (tab === 'browse') jiraBrowse('projects');
+}
+
+function debounceJiraSearch(val) {
+  clearTimeout(_jiraSearchTimer);
+  if (!val.trim()) {
+    document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Type to search Jira issues</div>';
+    return;
+  }
+  document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Searching...</div>';
+  _jiraSearchTimer = setTimeout(function() { jiraSearch(val); }, 400);
+}
+
+async function jiraSearch(query) {
+  try {
+    var jql = 'text ~ "' + query.replace(/"/g, '\"') + '" ORDER BY updated DESC';
+    var resp = await jiraFetch('/rest/api/3/issue/picker?query=' + encodeURIComponent(query) + '&currentJQL=' + encodeURIComponent(jql));
+    if (!resp.ok) throw new Error('Search failed');
+    var data = await resp.json();
+    var issues = [];
+    (data.sections || []).forEach(function(s) { issues = issues.concat(s.issues || []); });
+    renderJiraSearchResults(issues, query);
+  } catch(e) {
+    // fallback to JQL search
+    try {
+      var jql2 = 'summary ~ "' + query.replace(/"/g, '\"') + '*" OR text ~ "' + query.replace(/"/g, '\"') + '" ORDER BY updated DESC';
+      var resp2 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent(jql2) + '&maxResults=20&fields=summary,project,issuetype,status');
+      var data2 = await resp2.json();
+      renderJiraSearchResultsFull(data2.issues || []);
+    } catch(e2) {
+      document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Search failed. Please try again.</div>';
+    }
+  }
+}
+
+function renderJiraSearchResults(issues, query) {
+  var el = document.getElementById('jira-search-results');
+  if (!issues.length) { el.innerHTML = '<div class="jira-loading">No issues found for "' + esc(query) + '"</div>'; return; }
+  el.innerHTML = issues.map(function(issue) {
+    return '<div class="jira-result-item" data-key="' + esc(issue.key) + '" data-summary="' + esc(issue.summaryText || issue.summary || '') + '" onclick="handleJiraItemClick(this)">' +
+      '<span class="jira-result-key">' + esc(issue.key) + '</span>' +
+      '<span class="jira-result-name">' + esc(issue.summaryText || issue.summary || '') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function renderJiraSearchResultsFull(issues) {
+  var el = document.getElementById('jira-search-results');
+  if (!issues.length) { el.innerHTML = '<div class="jira-loading">No issues found</div>'; return; }
+  el.innerHTML = issues.map(function(issue) {
+    var summary = issue.fields ? issue.fields.summary : '';
+    var project = issue.fields && issue.fields.project ? issue.fields.project.name : '';
+    return '<div class="jira-result-item" data-key="' + esc(issue.key) + '" data-summary="' + esc(summary) + '" onclick="handleJiraItemClick(this)">' +
+      '<span class="jira-result-key">' + esc(issue.key) + '</span>' +
+      '<span class="jira-result-name">' + esc(summary) + '</span>' +
+      '<span class="jira-result-project">' + esc(project) + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+async function jiraBrowse(level, key, name) {
+  _jiraBrowseState.level = level;
+  var bc = document.getElementById('jira-breadcrumb');
+  var res = document.getElementById('jira-browse-results');
+  res.innerHTML = '<div class="jira-loading">Loading...</div>';
+
+  if (level === 'projects') {
+    _jiraBrowseState.projectKey = null;
+    bc.innerHTML = '<span style="color:white">All projects</span>';
+    try {
+      var resp = await jiraFetch('/rest/api/3/project/search?maxResults=50&orderBy=name');
+      var data = await resp.json();
+      var projects = data.values || [];
+      if (!projects.length) { res.innerHTML = '<div class="jira-loading">No projects found</div>'; return; }
+      res.innerHTML = projects.map(function(p) {
+        return '<div class="jira-result-item" data-key="' + esc(p.key) + '" data-name="' + esc(p.name) + '" onclick="handleJiraProjectClick(this)">' +
+          '<span class="jira-result-key">' + esc(p.key) + '</span>' +
+          '<span class="jira-result-name">' + esc(p.name) + '</span>' +
+        '</div>';
+      }).join('');
+    } catch(e) { res.innerHTML = '<div class="jira-loading">Failed to load projects</div>'; }
+
+  } else if (level === 'issues') {
+    _jiraBrowseState.projectKey = key;
+    _jiraBrowseState.projectName = name;
+    bc.innerHTML = '<span onclick="jiraBrowseProjects()">All projects</span>' +
+      '<span style="color:rgba(255,255,255,0.4)">›</span>' +
+      '<span style="color:white">' + esc(name) + '</span>';
+    try {
+      var jql = 'project = ' + key + ' ORDER BY updated DESC';
+      var resp2 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent(jql) + '&maxResults=30&fields=summary,issuetype,status');
+      var data2 = await resp2.json();
+      var issues = data2.issues || [];
+      if (!issues.length) { res.innerHTML = '<div class="jira-loading">No issues in this project</div>'; return; }
+      res.innerHTML = issues.map(function(issue) {
+        var summary = issue.fields ? issue.fields.summary : '';
+        return '<div class="jira-result-item" data-key="' + esc(issue.key) + '" data-summary="' + esc(summary) + '" onclick="handleJiraItemClick(this)">' +
+          '<span class="jira-result-key">' + esc(issue.key) + '</span>' +
+          '<span class="jira-result-name">' + esc(summary) + '</span>' +
+        '</div>';
+      }).join('');
+    } catch(e) { res.innerHTML = '<div class="jira-loading">Failed to load issues</div>'; }
+  }
+}
+
+function jiraBrowseProjects() { jiraBrowse('projects'); }
+function handleJiraProjectClick(el) {
+  var key = el.getAttribute('data-key');
+  var name = el.getAttribute('data-name');
+  jiraBrowse('issues', key, name);
+}
+
+function handleJiraItemClick(el) {
+  var key = el.getAttribute('data-key');
+  var summary = el.getAttribute('data-summary');
+  selectJiraIssue(key, summary);
+}
+
+function selectJiraIssue(key, summary) {
+  // Show description dialog before adding
+  showJiraDescriptionDialog(key, summary);
+}
+
+function showJiraDescriptionDialog(key, summary) {
+  var overlay = document.createElement('div');
+  overlay.id = 'jira-desc-overlay';
+  overlay.dataset.key = key;
+  overlay.dataset.summary = summary;
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);';
+  var dark = isDarkMode();
+  var panelBg = dark ? 'rgba(20,10,40,0.85)' : 'rgba(220,210,250,0.75)';
+  overlay.innerHTML =
+    '<div style="background:' + panelBg + ';backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,' + (dark?'0.18':'0.5') + ');border-top-color:rgba(255,255,255,' + (dark?'0.3':'0.8') + ');border-radius:20px;padding:24px;width:90%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,0.3);">' +
+      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">' + esc(key) + '</div>' +
+      '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:16px;line-height:1.4;">' + esc(summary) + '</div>' +
+      '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Description <span style="opacity:0.6;">(optional — shown in Jira worklog)</span></label>' +
+      '<textarea id="jira-desc-input" placeholder="What did you work on?" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;resize:vertical;font-family:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);"></textarea>' +
+      '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">' +
+        '<button onclick="closeJiraDescDialog()" style="padding:9px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Cancel</button>' +
+        '<button onclick="confirmJiraIssueFromDialog()" style="padding:9px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);">Add &amp; Track</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  setTimeout(function() { var t = document.getElementById('jira-desc-input'); if(t) t.focus(); }, 50);
+}
+
+function confirmJiraIssueFromDialog() {
+  var overlay = document.getElementById('jira-desc-overlay');
+  var key = overlay ? overlay.dataset.key : '';
+  var summary = overlay ? overlay.dataset.summary : '';
+  confirmJiraIssue(key, summary);
+}
+
+function closeJiraDescDialog() {
+  var el = document.getElementById('jira-desc-overlay');
+  if (el) el.remove();
+}
+
+function confirmJiraIssue(key, summary) {
+  var descEl = document.getElementById('jira-desc-input');
+  var desc = descEl ? descEl.value.trim() : '';
+  closeJiraDescDialog();
+  var entries = loadEntries();
+  var todayKey = dayKey(Date.now());
+  var todayCount = entries.filter(function(e) { return dayKey(e.ts || Date.now()) === todayKey; }).length;
+  var colorIdx = todayCount % PASTEL_COLORS.length;
+  var id = Date.now();
+  entries.push({ id: id, name: summary, ms: 0, ts: Date.now(), colorIdx: colorIdx, untracked: true, jiraKey: key, jiraSummary: summary, jiraDesc: desc, jiraSent: false });
+  saveEntries(entries);
+  setAddMode('manual');
+  renderToday();
+}
+
+// ---- SEND TO JIRA ----
+function showSendToJiraDialog(id) {
+  closeFloatingMenu();
+  var entries = loadEntries();
+  var entry = entries.find(function(e) { return e.id === Number(id); });
+  if (!entry) return;
+  var mins = Math.ceil(entry.ms / 60000);
+  if (mins < 1) mins = 1;
+  var dark = isDarkMode();
+  var panelBg = dark ? 'rgba(20,10,40,0.85)' : 'rgba(220,210,250,0.75)';
+  var overlay = document.createElement('div');
+  overlay.id = 'jira-send-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);';
+  overlay.innerHTML =
+    '<div style="background:' + panelBg + ';backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,' + (dark?'0.18':'0.5') + ');border-top-color:rgba(255,255,255,' + (dark?'0.3':'0.8') + ');border-radius:20px;padding:24px;width:90%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,0.3);">' +
+      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">' + esc(entry.jiraKey) + '</div>' +
+      '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:16px;line-height:1.4;">' + esc(entry.jiraSummary || entry.name) + '</div>' +
+      '<div style="display:flex;gap:12px;margin-bottom:14px;">' +
+        '<div style="flex:1;">' +
+          '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Time spent</label>' +
+          '<div style="padding:9px 14px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;">' + mins + ' min</div>' +
+        '</div>' +
+        '<div style="flex:1;">' +
+          '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Date</label>' +
+          '<div style="padding:9px 14px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;">' + new Date(entry.ts).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Description</label>' +
+      '<textarea id="jira-send-desc" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;resize:vertical;font-family:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">' + esc(entry.jiraDesc || '') + '</textarea>' +
+      '<div id="jira-send-status" style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:8px;min-height:18px;"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">' +
+        '<button onclick="closeSendDialog()" style="padding:9px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Cancel</button>' +
+        '<button id="jira-send-btn" onclick="sendWorklogToJira(' + id + ')" style="padding:9px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);">Send to Jira</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function closeSendDialog() {
+  var el = document.getElementById('jira-send-overlay');
+  if (el) el.remove();
+}
+
+function editJiraDescInline(id) {
+  var entries = loadEntries();
+  var entry = entries.find(function(e) { return e.id === Number(id); });
+  if (!entry || entry.jiraSent) return;
+  var desc = prompt('Edit description for ' + (entry.jiraKey || entry.name) + ':', entry.jiraDesc || '');
+  if (desc === null) return; // cancelled
+  var idx = entries.findIndex(function(e) { return e.id === Number(id); });
+  if (idx > -1) { entries[idx].jiraDesc = desc.trim(); saveEntries(entries); renderToday(); }
+}
+
+function editJiraDesc(id) {
+  closeFloatingMenu();
+  var entries = loadEntries();
+  var entry = entries.find(function(e) { return e.id === Number(id); });
+  if (!entry) return;
+  var dark = isDarkMode();
+  var panelBg = dark ? 'rgba(20,10,40,0.85)' : 'rgba(220,210,250,0.75)';
+  var overlay = document.createElement('div');
+  overlay.id = 'jira-editdesc-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);';
+  overlay.innerHTML =
+    '<div style="background:' + panelBg + ';backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,' + (dark?'0.18':'0.5') + ');border-top-color:rgba(255,255,255,' + (dark?'0.3':'0.8') + ');border-radius:20px;padding:24px;width:90%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,0.3);">' +
+      '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:14px;">' + esc(entry.jiraSummary || entry.name) + '</div>' +
+      '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Description</label>' +
+      '<textarea id="jira-editdesc-input" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;resize:vertical;font-family:inherit;">' + esc(entry.jiraDesc || '') + '</textarea>' +
+      '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">' +
+        '<button onclick="closeEditDescDialog()" style="padding:9px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Cancel</button>' +
+        '<button onclick="saveJiraDesc(' + id + ')" style="padding:9px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);">Save</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function closeEditDescDialog() {
+  var el = document.getElementById('jira-editdesc-overlay');
+  if (el) el.remove();
+}
+
+function saveJiraDesc(id) {
+  var input = document.getElementById('jira-editdesc-input');
+  if (!input) return;
+  var entries = loadEntries();
+  var idx = entries.findIndex(function(e) { return e.id === Number(id); });
+  if (idx === -1) return;
+  entries[idx].jiraDesc = input.value.trim();
+  saveEntries(entries);
+  closeEditDescDialog();
+  renderToday();
+}
+
+async function sendWorklogToJira(id) {
+  var entries = loadEntries();
+  var entry = entries.find(function(e) { return e.id === Number(id); });
+  if (!entry || !entry.jiraKey) return;
+  var btn = document.getElementById('jira-send-btn');
+  var status = document.getElementById('jira-send-status');
+  var descEl = document.getElementById('jira-send-desc');
+  var desc = descEl ? descEl.value.trim() : (entry.jiraDesc || '');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+  if (status) { status.textContent = 'Posting worklog to Jira...'; status.style.color = 'rgba(255,255,255,0.55)'; }
+
+  // Round up to nearest minute
+  var mins = Math.ceil(entry.ms / 60000);
+  if (mins < 1) mins = 1;
+  var timeSpentSeconds = mins * 60;
+
+  // Format date as ISO with time
+  var trackDate = new Date(entry.ts);
+  var dateStr = trackDate.getFullYear() + '-' +
+    String(trackDate.getMonth()+1).padStart(2,'0') + '-' +
+    String(trackDate.getDate()).padStart(2,'0') + 'T' +
+    String(trackDate.getHours()).padStart(2,'0') + ':' +
+    String(trackDate.getMinutes()).padStart(2,'0') + ':00.000+0000';
+
+  var body = {
+    timeSpentSeconds: timeSpentSeconds,
+    started: dateStr
+  };
+  if (desc) body.comment = {
+    type: 'doc', version: 1,
+    content: [{ type: 'paragraph', content: [{ type: 'text', text: desc }] }]
+  };
+
+  try {
+    var resp = await jiraFetch('/rest/api/3/issue/' + entry.jiraKey + '/worklog', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      var errText = await resp.text();
+      throw new Error(errText);
+    }
+    // Mark as sent — lock the entry
+    var idx = entries.findIndex(function(e) { return e.id === Number(id); });
+    if (idx > -1) {
+      entries[idx].jiraSent = true;
+      entries[idx].jiraDesc = desc;
+      entries[idx].untracked = false;
+      saveEntries(entries);
+    }
+    if (status) { status.textContent = '✓ Worklog posted to Jira!'; status.style.color = 'rgba(160,255,180,0.9)'; }
+    if (btn) { btn.textContent = 'Done!'; }
+    setTimeout(function() { closeSendDialog(); renderToday(); renderHistory(); }, 1200);
+  } catch(e) {
+    console.error('Jira worklog error:', e);
+    if (status) { status.textContent = '✗ Failed: ' + (e.message || 'Unknown error'); status.style.color = 'rgba(255,160,160,0.9)'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Send to Jira'; }
+  }
+}
+
+// ---- DRAG AND DROP ----
+var dragSrcId = null;
+function initDragDrop() {
+  var list = document.getElementById('today-entries');
+  if (!list) return;
+  list.addEventListener('dragstart', function(e) {
+    var card = e.target.closest('[data-id]');
+    if (!card) return;
+    dragSrcId = Number(card.dataset.id);
+    setTimeout(function() { card.classList.add('drag-over'); }, 0);
+  });
+  list.addEventListener('dragend', function(e) {
+    document.querySelectorAll('.entry-card').forEach(function(c) { c.classList.remove('drag-over'); });
+  });
+  list.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    var card = e.target.closest('[data-id]');
+    if (!card || Number(card.dataset.id) === dragSrcId) return;
+    var r = card.getBoundingClientRect();
+    var after = e.clientY > r.top + r.height / 2;
+    var ref = after ? card.nextSibling : card;
+    if (ref) list.insertBefore(document.querySelector('[data-id="' + dragSrcId + '"]'), ref);
+    else list.appendChild(document.querySelector('[data-id="' + dragSrcId + '"]'));
+  });
+  list.addEventListener('drop', function(e) {
+    e.preventDefault();
+    var newOrder = Array.from(list.querySelectorAll('[data-id]')).map(function(c) { return Number(c.dataset.id); });
+    var entries = loadEntries();
+    var todayKey = dayKey(Date.now());
+    var todayEntries = entries.filter(function(e) { return dayKey(e.ts) === todayKey; });
+    var otherEntries = entries.filter(function(e) { return dayKey(e.ts) !== todayKey; });
+    var reordered = newOrder.map(function(id) { return todayEntries.find(function(e) { return e.id === id; }); }).filter(Boolean);
+    // assign sortOrder
+    reordered.forEach(function(e, i) { e.sortOrder = i; });
+    saveEntries(otherEntries.concat(reordered));
+  });
+}
+
+// ---- WEEKLY SUMMARY ----
+var weekOffset = 0;
+function getWeekBounds(offset) {
+  var now = new Date();
+  var day = now.getDay(); // 0=Sun
+  var monday = new Date(now);
+  monday.setDate(now.getDate() - ((day + 6) % 7) + offset * 7);
+  monday.setHours(0,0,0,0);
+  var sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23,59,59,999);
+  return { start: monday, end: sunday };
+}
+function renderWeekly() {
+  var bounds = getWeekBounds(weekOffset);
+  var entries = loadEntries().filter(function(e) { return !e.untracked || e.ms > 0; });
+  var weekEntries = entries.filter(function(e) { return e.ts >= bounds.start.getTime() && e.ts <= bounds.end.getTime(); });
+  var totalMs = weekEntries.reduce(function(s,e) { return s + (e.ms||0); }, 0);
+
+  // Build day-by-day data
+  var days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var dayTotals = days.map(function(_, i) {
+    var d = new Date(bounds.start); d.setDate(bounds.start.getDate() + i);
+    var dk = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    return weekEntries.filter(function(e) { return dayKey(e.ts) === dk; }).reduce(function(s,e) { return s + (e.ms||0); }, 0);
+  });
+  var maxDay = Math.max.apply(null, dayTotals) || 1;
+
+  // Task breakdown
+  var byName = {};
+  weekEntries.forEach(function(e) {
+    if (!byName[e.name]) byName[e.name] = 0;
+    byName[e.name] += (e.ms||0);
+  });
+  var taskList = Object.keys(byName).sort(function(a,b) { return byName[b] - byName[a]; });
+
+  var fmt1 = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+  var weekLabel = fmt1.format(bounds.start) + ' – ' + fmt1.format(bounds.end);
+
+  var barsHtml = days.map(function(d, i) {
+    var pct = dayTotals[i] / maxDay * 100;
+    return '<div class="weekly-bar-row">' +
+      '<span class="weekly-bar-day">' + d + '</span>' +
+      '<div class="weekly-bar-bg"><div class="weekly-bar-fill" style="width:' + pct.toFixed(1) + '%"></div></div>' +
+      '<span class="weekly-bar-val">' + (dayTotals[i] > 0 ? fmtTotal(dayTotals[i]) : '—') + '</span>' +
+    '</div>';
+  }).join('');
+
+  var tasksHtml = taskList.length === 0 ? '<div class="empty">No tracked time this week</div>' :
+    taskList.map(function(name) {
+      return '<div class="weekly-task-row">' +
+        '<span class="weekly-task-name">' + esc(name) + '</span>' +
+        '<span class="weekly-task-time">' + fmtTotal(byName[name]) + '</span>' +
+      '</div>';
+    }).join('');
+
+  document.getElementById('weekly-content').innerHTML =
+    '<div class="weekly-header">' +
+      '<div class="weekly-nav">' +
+        '<button onclick="weekOffset--;renderWeekly()">&#8592;</button>' +
+        '<span>' + weekLabel + '</span>' +
+        '<button onclick="weekOffset++;renderWeekly()" ' + (weekOffset >= 0 ? 'disabled style="opacity:0.35;cursor:not-allowed"' : '') + '>&#8594;</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="weekly-total-card"><span class="wlabel">Total this week</span><span class="wval">' + fmtTotal(totalMs) + '</span></div>' +
+    '<div class="weekly-bar-wrap">' + barsHtml + '</div>' +
+    '<div class="weekly-section-label">By task</div>' +
+    '<div class="weekly-tasks">' + tasksHtml + '</div>';
+}
+
+// ---- SETTINGS ----
+var GRADIENT_PRESETS = [
+  { light: 'linear-gradient(135deg,#7090d0 0%,#9060c8 35%,#b060a0 65%,#d07090 100%)', dark: 'linear-gradient(135deg,#030810 0%,#090318 50%,#03080e 100%)', colors: ['#7090d0','#9060c8','#d07090'] },
+  { light: 'linear-gradient(135deg,#50a888 0%,#6090c8 50%,#8060c0 100%)', dark: 'linear-gradient(135deg,#041a10 0%,#061525 50%,#0f0520 100%)', colors: ['#50a888','#6090c8','#8060c0'] },
+  { light: 'linear-gradient(135deg,#c87840 0%,#c05080 50%,#9050c0 100%)', dark: 'linear-gradient(135deg,#1a0e04 0%,#1a0610 50%,#100520 100%)', colors: ['#c87840','#c05080','#9050c0'] },
+  { light: 'linear-gradient(135deg,#50b870 0%,#40a0b0 50%,#5070c8 100%)', dark: 'linear-gradient(135deg,#041a08 0%,#041520 50%,#060f1a 100%)', colors: ['#50b870','#40a0b0','#5070c8'] },
+  { light: 'linear-gradient(135deg,#c07050 0%,#c09040 50%,#a0b040 100%)', dark: 'linear-gradient(135deg,#1a0804 0%,#1a0e04 50%,#140e00 100%)', colors: ['#c07050','#c09040','#a0b040'] },
+  { light: 'linear-gradient(135deg,#5080c0 0%,#4090a8 50%,#40a888 100%)', dark: 'linear-gradient(135deg,#040e1a 0%,#041518 50%,#041410 100%)', colors: ['#5080c0','#4090a8','#40a888'] },
+];
+var activePreset = 0;
+
+function loadGradientSetting() {
+  try {
+    var s = localStorage.getItem('ltt_gradient');
+    if (s) { var g = JSON.parse(s); applyGradient(g.light, g.dark); activePreset = g.preset !== undefined ? g.preset : -1; }
+  } catch(e) {}
+}
+function applyPreset(i) {
+  var p = GRADIENT_PRESETS[i];
+  if (!p) return;
+  applyGradient(p.light, p.dark, i);
+  // update pickers to reflect preset colors
+  document.getElementById('grad-color1').value = p.colors[0];
+  document.getElementById('grad-color2').value = p.colors[1];
+  document.getElementById('grad-color3').value = p.colors[2];
+  // save preset colors so they restore on revisit
+  try {
+    var saved = JSON.parse(localStorage.getItem('ltt_gradient') || '{}');
+    saved.colors = p.colors;
+    localStorage.setItem('ltt_gradient', JSON.stringify(saved));
+  } catch(e) {}
+}
+function applyGradient(lightGrad, darkGrad, presetIdx) {
+  var styleEl = document.getElementById('grad-style');
+  if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'grad-style'; document.head.appendChild(styleEl); }
+  styleEl.textContent = ':root.light{--grad:' + lightGrad + '} :root.dark{--grad:' + darkGrad + '}' ;
+  if (presetIdx !== undefined) activePreset = presetIdx;
+  localStorage.setItem('ltt_gradient', JSON.stringify({ light: lightGrad, dark: darkGrad, preset: activePreset }));
+  document.querySelectorAll('.preset-swatch').forEach(function(sw, i) { sw.classList.toggle('active', i === activePreset); });
+}
+function applyCustomGradient() {
+  var c1 = document.getElementById('grad-color1').value;
+  var c2 = document.getElementById('grad-color2').value;
+  var c3 = document.getElementById('grad-color3').value;
+  function darken(hex) {
+    var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return 'rgb(' + Math.round(r*0.12) + ',' + Math.round(g*0.12) + ',' + Math.round(b*0.12) + ')';
+  }
+  var light = 'linear-gradient(135deg,' + c1 + ' 0%,' + c2 + ' 45%,' + c3 + ' 100%)';
+  var dark = 'linear-gradient(135deg,' + darken(c1) + ' 0%,' + darken(c2) + ' 50%,' + darken(c3) + ' 100%)';
+  activePreset = -1;
+  applyGradient(light, dark, -1);
+  // save the custom colors so pickers restore correctly
+  try {
+    var saved = JSON.parse(localStorage.getItem('ltt_gradient') || '{}');
+    saved.colors = [c1, c2, c3];
+    localStorage.setItem('ltt_gradient', JSON.stringify(saved));
+  } catch(e) {}
+}
+function updateNoise(val) {
+  var canvas = document.getElementById('grain-canvas');
+  if (canvas) canvas.style.opacity = (val / 100).toFixed(2);
+  var lbl = document.getElementById('noise-val');
+  if (lbl) lbl.textContent = val + '%';
+  localStorage.setItem('ltt_noise', val);
+  var slider = document.getElementById('noise-slider');
+  if (slider) slider.value = val;
+}
+
+function renderSettings() {
+  var presetsEl = document.getElementById('gradient-presets');
+  presetsEl.innerHTML = GRADIENT_PRESETS.map(function(p, i) {
+    return '<div class="preset-swatch' + (i === activePreset ? ' active' : '') + '" style="background:' + p.light + '" title="Preset ' + (i+1) + '" onclick="applyPreset(' + i + ')"></div>';
+  }).join('');
+  // restore saved custom colors if available, otherwise fall back to active preset
+  try {
+    var saved = localStorage.getItem('ltt_gradient');
+    if (saved) {
+      var g = JSON.parse(saved);
+      if (g.colors) {
+        document.getElementById('grad-color1').value = g.colors[0];
+        document.getElementById('grad-color2').value = g.colors[1];
+        document.getElementById('grad-color3').value = g.colors[2];
+        return;
+      }
+    }
+  } catch(e) {}
+  var current = GRADIENT_PRESETS[activePreset >= 0 ? activePreset : 0].colors;
+  document.getElementById('grad-color1').value = current[0];
+  document.getElementById('grad-color2').value = current[1];
+  document.getElementById('grad-color3').value = current[2];
+}
+
+resetTimer(false);
+// Clear old saved gradient so new default applies
+localStorage.removeItem('ltt_gradient');
+loadGradientSetting();
+loadTitle();
+loadBgImage();
+// Handle OAuth callback if returning from Atlassian
+if (window.location.search.includes('code=')) { handleOAuthCallback(); }
+renderToday();
+// drag drop inits after each renderToday call
+</script>
+<div id="grain-overlay"></div>
+<div id="floating-menu" style="display:none;position:fixed;z-index:99999;min-width:188px;border-radius:14px;overflow:hidden;backdrop-filter:blur(32px) saturate(180%);-webkit-backdrop-filter:blur(32px) saturate(180%);"></div>
+</body>
+</html>
