@@ -134,6 +134,8 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .history-day-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.06em; }
 .history-day-total { font-size: 13px; font-weight: 700; color: white; }
 .empty { text-align: center; color: rgba(255,255,255,0.42); font-size: 14px; padding: 2.5rem 0; }
+.entry-desc { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.entry-desc:hover { color: rgba(255,255,255,0.7); }
 
 /* Jira picker */
 .jira-picker { margin-bottom: 1rem; }
@@ -787,11 +789,12 @@ function renderToday() {
         : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>')
       : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>');
     const timeDisplay = e.ms > 0 ? fmtShort(e.ms) : '';
-    var jiraBadge = e.jiraKey ? '<span class="jira-issue-key-badge">' + esc(e.jiraKey) + '</span>' : '';
     return '<div class="entry-card" draggable="true" data-id="' + e.id + '">' +
       '<span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>' +
       '<div class="entry-info">' +
-        '<div class="entry-name">' + (e.jiraKey ? esc(e.jiraSummary || e.name) : esc(e.name)) + jiraBadge + (e.untracked && e.ms === 0 ? '<span class="untracked-badge">planned</span>' : '') + '</div>' +
+        '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' + esc(e.jiraSummary || e.name) : esc(e.name)) + (e.untracked && e.ms === 0 ? '<span class="untracked-badge">planned</span>' : '') + '</div>' +
+        (e.jiraKey && !e.jiraSent ? '<div class="entry-desc" onclick="editJiraDescInline(' + e.id + ')">' + (e.jiraDesc ? esc(e.jiraDesc) : '<span style="opacity:0.4">Add description...</span>') + '</div>' : '') +
+        (e.jiraKey && e.jiraSent ? '<div class="entry-desc" style="opacity:0.5;">' + (e.jiraDesc ? esc(e.jiraDesc) : '') + ' <span style="color:rgba(160,255,180,0.8)">✓ Sent</span></div>' : '') +
         (e.ms > 0 ? '<div class="entry-meta">Last tracked ' + timeOfDay(e.ts) + '</div>' : '') +
       '</div>' +
       '<div class="entry-actions">' +
@@ -1574,6 +1577,16 @@ function showSendToJiraDialog(id) {
 function closeSendDialog() {
   var el = document.getElementById('jira-send-overlay');
   if (el) el.remove();
+}
+
+function editJiraDescInline(id) {
+  var entries = loadEntries();
+  var entry = entries.find(function(e) { return e.id === Number(id); });
+  if (!entry || entry.jiraSent) return;
+  var desc = prompt('Edit description for ' + (entry.jiraKey || entry.name) + ':', entry.jiraDesc || '');
+  if (desc === null) return; // cancelled
+  var idx = entries.findIndex(function(e) { return e.id === Number(id); });
+  if (idx > -1) { entries[idx].jiraDesc = desc.trim(); saveEntries(entries); renderToday(); }
 }
 
 function editJiraDesc(id) {
