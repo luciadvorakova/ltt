@@ -532,6 +532,9 @@ function toggleMenu(e, id) {
   fm.style.background = 'rgba(255,255,255,' + (dark ? '0.12' : '0.55') + ')';
   fm.style.border = '1px solid rgba(255,255,255,' + (dark ? '0.14' : '0.28') + ')';
   fm.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,' + (dark ? '0.18' : '0.38') + '), 0 8px 32px rgba(' + (dark ? '0,0,0,0.45' : '40,10,100,0.15') + ')';
+  var entryForMenu = loadEntries().find(function(e) { return e.id === Number(id); });
+  var hasJira = entryForMenu && entryForMenu.jiraKey && !entryForMenu.jiraSent;
+  var isSent = entryForMenu && entryForMenu.jiraSent;
   fm.innerHTML =
     '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.88);font-weight:400;font-family:inherit" class="fm-menu-btn" onclick="showLogForm(' + id + ')">Add time manually</button>' +
     '<div id="fm-log-form" style="display:none;padding:10px 16px 12px;border-top:1px solid rgba(255,255,255,0.15);gap:6px;align-items:center">' +
@@ -677,6 +680,10 @@ function addTask() {
 function trackEntry(id) {
   const numId = Number(id);
 
+  // Block tracking on Jira-sent entries
+  var entryCheck = loadEntries().find(function(e) { return e.id === numId; });
+  if (entryCheck && entryCheck.jiraSent) return;
+
   // Clicking the already-active task: toggle pause/resume
   if (activeEntryId === numId) {
     if (running) {
@@ -768,11 +775,14 @@ function renderToday() {
     const cardBTop = 'rgba(255,255,255,0.16)';
     const cardText = 'rgba(255,255,255,1)';
     const isActive = e.id === activeEntryId;
-    const trackIcon = isActive
-    ? (running
-      ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1.5" y="1.5" width="2.5" height="7" rx="1" fill="white"/><rect x="6" y="1.5" width="2.5" height="7" rx="1" fill="white"/></svg>'
-      : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>')
-    : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>';
+    var isSentToJira = e.jiraSent;
+    const trackIcon = isSentToJira
+    ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5.5L3.5 7.5L8.5 2.5" stroke="rgba(160,255,180,0.9)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : (isActive
+      ? (running
+        ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1.5" y="1.5" width="2.5" height="7" rx="1" fill="white"/><rect x="6" y="1.5" width="2.5" height="7" rx="1" fill="white"/></svg>'
+        : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>')
+      : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>');
     const timeDisplay = e.ms > 0 ? fmtShort(e.ms) : '';
     var jiraBadge = e.jiraKey ? '<span class="jira-issue-key-badge">' + esc(e.jiraKey) + '</span>' : '';
     return '<div class="entry-card" draggable="true" data-id="' + e.id + '">' +
@@ -783,7 +793,7 @@ function renderToday() {
       '</div>' +
       '<div class="entry-actions">' +
         '<span class="entry-time">' + timeDisplay + '</span>' +
-        '<button class="btn-track' + (isActive ? ' active-tracking' : '') + '" onclick="trackEntry(' + e.id + ')" style="border-color:rgba(255,255,255,0.5)">' + trackIcon + '</button>' +
+        '<button class="btn-track' + (isActive ? ' active-tracking' : '') + '" onclick="trackEntry(' + e.id + ')" style="border-color:rgba(255,255,255,0.5);" ' + (isSentToJira ? 'title="Sent to Jira" style="border-color:rgba(160,255,180,0.4);background:rgba(160,255,180,0.1);cursor:default;pointer-events:none;"' : '') + '>' + trackIcon + '</button>' +
         '<button class="btn-dots" onclick="toggleMenu(event,' + e.id + ')">&#8943;</button>' +
       '</div>' +
     '</div>';
@@ -1466,19 +1476,202 @@ function handleJiraItemClick(el) {
 }
 
 function selectJiraIssue(key, summary) {
+  // Show description dialog before adding
+  showJiraDescriptionDialog(key, summary);
+}
+
+function showJiraDescriptionDialog(key, summary) {
+  var overlay = document.createElement('div');
+  overlay.id = 'jira-desc-overlay';
+  overlay.dataset.key = key;
+  overlay.dataset.summary = summary;
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);';
+  var dark = isDarkMode();
+  var panelBg = dark ? 'rgba(20,10,40,0.85)' : 'rgba(220,210,250,0.75)';
+  overlay.innerHTML =
+    '<div style="background:' + panelBg + ';backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,' + (dark?'0.18':'0.5') + ');border-top-color:rgba(255,255,255,' + (dark?'0.3':'0.8') + ');border-radius:20px;padding:24px;width:90%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,0.3);">' +
+      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">' + esc(key) + '</div>' +
+      '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:16px;line-height:1.4;">' + esc(summary) + '</div>' +
+      '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Description <span style="opacity:0.6;">(optional — shown in Jira worklog)</span></label>' +
+      '<textarea id="jira-desc-input" placeholder="What did you work on?" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;resize:vertical;font-family:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);"></textarea>' +
+      '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">' +
+        '<button onclick="closeJiraDescDialog()" style="padding:9px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Cancel</button>' +
+        '<button onclick="confirmJiraIssueFromDialog()" style="padding:9px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);">Add &amp; Track</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  setTimeout(function() { var t = document.getElementById('jira-desc-input'); if(t) t.focus(); }, 50);
+}
+
+function confirmJiraIssueFromDialog() {
+  var overlay = document.getElementById('jira-desc-overlay');
+  var key = overlay ? overlay.dataset.key : '';
+  var summary = overlay ? overlay.dataset.summary : '';
+  confirmJiraIssue(key, summary);
+}
+
+function closeJiraDescDialog() {
+  var el = document.getElementById('jira-desc-overlay');
+  if (el) el.remove();
+}
+
+function confirmJiraIssue(key, summary) {
+  var descEl = document.getElementById('jira-desc-input');
+  var desc = descEl ? descEl.value.trim() : '';
+  closeJiraDescDialog();
   var entries = loadEntries();
   var todayKey = dayKey(Date.now());
   var todayCount = entries.filter(function(e) { return dayKey(e.ts || Date.now()) === todayKey; }).length;
   var colorIdx = todayCount % PASTEL_COLORS.length;
   var id = Date.now();
-  var name = '[' + key + '] ' + summary;
-  entries.push({ id: id, name: name, ms: 0, ts: Date.now(), colorIdx: colorIdx, untracked: true, jiraKey: key, jiraSummary: summary });
+  entries.push({ id: id, name: summary, ms: 0, ts: Date.now(), colorIdx: colorIdx, untracked: true, jiraKey: key, jiraSummary: summary, jiraDesc: desc, jiraSent: false });
   saveEntries(entries);
-  // Switch back to manual mode and reset
   setAddMode('manual');
   renderToday();
-  // Auto-start tracking
   trackEntry(id);
+}
+
+// ---- SEND TO JIRA ----
+function showSendToJiraDialog(id) {
+  closeFloatingMenu();
+  var entries = loadEntries();
+  var entry = entries.find(function(e) { return e.id === Number(id); });
+  if (!entry) return;
+  var mins = Math.ceil(entry.ms / 60000);
+  if (mins < 1) mins = 1;
+  var dark = isDarkMode();
+  var panelBg = dark ? 'rgba(20,10,40,0.85)' : 'rgba(220,210,250,0.75)';
+  var overlay = document.createElement('div');
+  overlay.id = 'jira-send-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);';
+  overlay.innerHTML =
+    '<div style="background:' + panelBg + ';backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,' + (dark?'0.18':'0.5') + ');border-top-color:rgba(255,255,255,' + (dark?'0.3':'0.8') + ');border-radius:20px;padding:24px;width:90%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,0.3);">' +
+      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">' + esc(entry.jiraKey) + '</div>' +
+      '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:16px;line-height:1.4;">' + esc(entry.jiraSummary || entry.name) + '</div>' +
+      '<div style="display:flex;gap:12px;margin-bottom:14px;">' +
+        '<div style="flex:1;">' +
+          '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Time spent</label>' +
+          '<div style="padding:9px 14px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;">' + mins + ' min</div>' +
+        '</div>' +
+        '<div style="flex:1;">' +
+          '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Date</label>' +
+          '<div style="padding:9px 14px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;">' + new Date(entry.ts).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Description</label>' +
+      '<textarea id="jira-send-desc" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;resize:vertical;font-family:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">' + esc(entry.jiraDesc || '') + '</textarea>' +
+      '<div id="jira-send-status" style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:8px;min-height:18px;"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">' +
+        '<button onclick="closeSendDialog()" style="padding:9px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Cancel</button>' +
+        '<button id="jira-send-btn" onclick="sendWorklogToJira(' + id + ')" style="padding:9px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);">Send to Jira</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function closeSendDialog() {
+  var el = document.getElementById('jira-send-overlay');
+  if (el) el.remove();
+}
+
+function editJiraDesc(id) {
+  closeFloatingMenu();
+  var entries = loadEntries();
+  var entry = entries.find(function(e) { return e.id === Number(id); });
+  if (!entry) return;
+  var dark = isDarkMode();
+  var panelBg = dark ? 'rgba(20,10,40,0.85)' : 'rgba(220,210,250,0.75)';
+  var overlay = document.createElement('div');
+  overlay.id = 'jira-editdesc-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);';
+  overlay.innerHTML =
+    '<div style="background:' + panelBg + ';backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,' + (dark?'0.18':'0.5') + ');border-top-color:rgba(255,255,255,' + (dark?'0.3':'0.8') + ');border-radius:20px;padding:24px;width:90%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,0.3);">' +
+      '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:14px;">' + esc(entry.jiraSummary || entry.name) + '</div>' +
+      '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Description</label>' +
+      '<textarea id="jira-editdesc-input" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;resize:vertical;font-family:inherit;">' + esc(entry.jiraDesc || '') + '</textarea>' +
+      '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">' +
+        '<button onclick="closeEditDescDialog()" style="padding:9px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Cancel</button>' +
+        '<button onclick="saveJiraDesc(' + id + ')" style="padding:9px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);">Save</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function closeEditDescDialog() {
+  var el = document.getElementById('jira-editdesc-overlay');
+  if (el) el.remove();
+}
+
+function saveJiraDesc(id) {
+  var input = document.getElementById('jira-editdesc-input');
+  if (!input) return;
+  var entries = loadEntries();
+  var idx = entries.findIndex(function(e) { return e.id === Number(id); });
+  if (idx === -1) return;
+  entries[idx].jiraDesc = input.value.trim();
+  saveEntries(entries);
+  closeEditDescDialog();
+  renderToday();
+}
+
+async function sendWorklogToJira(id) {
+  var entries = loadEntries();
+  var entry = entries.find(function(e) { return e.id === Number(id); });
+  if (!entry || !entry.jiraKey) return;
+  var btn = document.getElementById('jira-send-btn');
+  var status = document.getElementById('jira-send-status');
+  var descEl = document.getElementById('jira-send-desc');
+  var desc = descEl ? descEl.value.trim() : (entry.jiraDesc || '');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+  if (status) { status.textContent = 'Posting worklog to Jira...'; status.style.color = 'rgba(255,255,255,0.55)'; }
+
+  // Round up to nearest minute
+  var mins = Math.ceil(entry.ms / 60000);
+  if (mins < 1) mins = 1;
+  var timeSpentSeconds = mins * 60;
+
+  // Format date as ISO with time
+  var trackDate = new Date(entry.ts);
+  var dateStr = trackDate.getFullYear() + '-' +
+    String(trackDate.getMonth()+1).padStart(2,'0') + '-' +
+    String(trackDate.getDate()).padStart(2,'0') + 'T' +
+    String(trackDate.getHours()).padStart(2,'0') + ':' +
+    String(trackDate.getMinutes()).padStart(2,'0') + ':00.000+0000';
+
+  var body = {
+    timeSpentSeconds: timeSpentSeconds,
+    started: dateStr
+  };
+  if (desc) body.comment = {
+    type: 'doc', version: 1,
+    content: [{ type: 'paragraph', content: [{ type: 'text', text: desc }] }]
+  };
+
+  try {
+    var resp = await jiraFetch('/rest/api/3/issue/' + entry.jiraKey + '/worklog', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+      var errText = await resp.text();
+      throw new Error(errText);
+    }
+    // Mark as sent — lock the entry
+    var idx = entries.findIndex(function(e) { return e.id === Number(id); });
+    if (idx > -1) {
+      entries[idx].jiraSent = true;
+      entries[idx].jiraDesc = desc;
+      entries[idx].untracked = false;
+      saveEntries(entries);
+    }
+    if (status) { status.textContent = '✓ Worklog posted to Jira!'; status.style.color = 'rgba(160,255,180,0.9)'; }
+    if (btn) { btn.textContent = 'Done!'; }
+    setTimeout(function() { closeSendDialog(); renderToday(); renderHistory(); }, 1200);
+  } catch(e) {
+    console.error('Jira worklog error:', e);
+    if (status) { status.textContent = '✗ Failed: ' + (e.message || 'Unknown error'); status.style.color = 'rgba(255,160,160,0.9)'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Send to Jira'; }
+  }
 }
 
 // ---- DRAG AND DROP ----
