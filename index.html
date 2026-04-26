@@ -275,18 +275,23 @@ input[type="color"] {
   <div id="tab-settings" class="section">
     <div class="settings-section">
       <div class="settings-label">Jira connection</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:1.5rem;position:relative;">
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;">Atlassian email</label>
-          <input type="email" id="jira-email" placeholder="you@company.com" style="padding:9px 16px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);" />
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.5rem;position:relative;">
+        <div id="jira-connected-view" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;flex:1;">
+            <span style="font-size:18px;">✓</span>
+            <div>
+              <div id="jira-user-name" style="font-size:13px;font-weight:600;color:white;"></div>
+              <div id="jira-user-email" style="font-size:11px;color:rgba(255,255,255,0.5);"></div>
+            </div>
+          </div>
+          <button onclick="disconnectJira()" style="padding:7px 16px;border-radius:99px;font-size:12px;font-weight:500;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Disconnect</button>
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px;">
-          <label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;">API token</label>
-          <input type="password" id="jira-token" placeholder="Paste your API token..." style="padding:9px 16px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);" />
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:2px;">
-          <button onclick="saveJiraCredentials()" style="padding:9px 20px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);">Save & Test</button>
-          <button onclick="clearJiraCredentials()" style="padding:9px 16px;border-radius:99px;font-size:13px;font-weight:500;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Clear</button>
+        <div id="jira-disconnected-view" style="display:flex;flex-direction:column;gap:8px;">
+          <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;">Connect your Atlassian account to search Jira issues and log time directly from LTT.</p>
+          <button onclick="connectJira()" style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);align-self:flex-start;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8S4.41 14.5 8 14.5 14.5 11.59 14.5 8 11.59 1.5 8 1.5zm3.5 8.75h-2.25V12.5h-2.5v-2.25H4.5v-2.5h2.25V5.5h2.5v2.25H11.5v2.5z" fill="#2a0a50"/></svg>
+            Connect to Jira
+          </button>
           <span id="jira-status" style="font-size:12px;color:rgba(255,255,255,0.55);"></span>
         </div>
       </div>
@@ -915,74 +920,170 @@ function loadBgImage() {
   if (saved) applyBgImage(saved);
 }
 
-// ---- JIRA INTEGRATION ----
+// ---- JIRA INTEGRATION (OAuth 2.0 PKCE) ----
+var JIRA_CLIENT_ID = 'dwD4aPYHdf9kXcnLDm3lqJhHIuJYoVUf';
+var JIRA_REDIRECT_URI = 'https://luciadvorakova.github.io/ltt/';
+var JIRA_SCOPES = 'read:jira-work write:jira-work read:jira-user offline_access';
 var JIRA_SITE = 'digismoothie.atlassian.net';
 
-function jiraAuthHeader() {
-  var email = localStorage.getItem('jira_email') || '';
-  var token = localStorage.getItem('jira_token') || '';
-  return 'Basic ' + btoa(email + ':' + token);
+// PKCE helpers
+function base64urlEncode(buffer) {
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+async function generateCodeVerifier() {
+  var array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return base64urlEncode(array);
+}
+async function generateCodeChallenge(verifier) {
+  var encoder = new TextEncoder();
+  var data = encoder.encode(verifier);
+  var digest = await crypto.subtle.digest('SHA-256', data);
+  return base64urlEncode(digest);
 }
 
-function saveJiraCredentials() {
-  var email = document.getElementById('jira-email').value.trim();
-  var token = document.getElementById('jira-token').value.trim();
+async function connectJira() {
+  var verifier = await generateCodeVerifier();
+  var challenge = await generateCodeChallenge(verifier);
+  localStorage.setItem('jira_pkce_verifier', verifier);
+  var state = base64urlEncode(crypto.getRandomValues(new Uint8Array(16)));
+  localStorage.setItem('jira_oauth_state', state);
+  var url = 'https://auth.atlassian.com/authorize' +
+    '?audience=api.atlassian.com' +
+    '&client_id=' + JIRA_CLIENT_ID +
+    '&scope=' + encodeURIComponent(JIRA_SCOPES) +
+    '&redirect_uri=' + encodeURIComponent(JIRA_REDIRECT_URI) +
+    '&state=' + state +
+    '&response_type=code' +
+    '&prompt=consent' +
+    '&code_challenge=' + challenge +
+    '&code_challenge_method=S256';
+  window.location.href = url;
+}
+
+async function handleOAuthCallback() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  var state = params.get('state');
+  if (!code) return;
+  var savedState = localStorage.getItem('jira_oauth_state');
+  if (state !== savedState) { console.error('OAuth state mismatch'); return; }
+  var verifier = localStorage.getItem('jira_pkce_verifier');
+  // Exchange code for token
   var status = document.getElementById('jira-status');
-  if (!email || !token) {
-    status.textContent = 'Please enter both email and token.';
-    status.style.color = 'rgba(255,160,160,0.9)';
-    return;
+  if (status) { status.textContent = 'Connecting to Jira...'; status.style.color = 'rgba(255,255,255,0.55)'; }
+  try {
+    var resp = await fetch('https://auth.atlassian.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'authorization_code',
+        client_id: JIRA_CLIENT_ID,
+        code: code,
+        redirect_uri: JIRA_REDIRECT_URI,
+        code_verifier: verifier
+      })
+    });
+    if (!resp.ok) throw new Error('Token exchange failed');
+    var data = await resp.json();
+    localStorage.setItem('jira_access_token', data.access_token);
+    if (data.refresh_token) localStorage.setItem('jira_refresh_token', data.refresh_token);
+    localStorage.setItem('jira_token_expiry', Date.now() + (data.expires_in * 1000));
+    // Clean URL
+    window.history.replaceState({}, document.title, JIRA_REDIRECT_URI);
+    // Get cloud ID and user info
+    await fetchJiraCloudId();
+    await fetchJiraUserInfo();
+    updateJiraUI();
+  } catch(e) {
+    console.error('OAuth error:', e);
+    if (status) { status.textContent = '✗ Connection failed. Please try again.'; status.style.color = 'rgba(255,160,160,0.9)'; }
   }
-  localStorage.setItem('jira_email', email);
-  localStorage.setItem('jira_token', token);
-  status.textContent = 'Testing connection...';
-  status.style.color = 'rgba(255,255,255,0.55)';
-  testJiraConnection(function(ok, msg) {
-    status.textContent = msg;
-    status.style.color = ok ? 'rgba(160,255,180,0.9)' : 'rgba(255,160,160,0.9)';
+}
+
+async function refreshJiraToken() {
+  var refresh = localStorage.getItem('jira_refresh_token');
+  if (!refresh) return false;
+  try {
+    var resp = await fetch('https://auth.atlassian.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'refresh_token',
+        client_id: JIRA_CLIENT_ID,
+        refresh_token: refresh
+      })
+    });
+    if (!resp.ok) return false;
+    var data = await resp.json();
+    localStorage.setItem('jira_access_token', data.access_token);
+    if (data.refresh_token) localStorage.setItem('jira_refresh_token', data.refresh_token);
+    localStorage.setItem('jira_token_expiry', Date.now() + (data.expires_in * 1000));
+    return true;
+  } catch(e) { return false; }
+}
+
+async function jiraFetch(path, options) {
+  var expiry = parseInt(localStorage.getItem('jira_token_expiry') || '0');
+  if (Date.now() > expiry - 60000) await refreshJiraToken();
+  var token = localStorage.getItem('jira_access_token');
+  var cloudId = localStorage.getItem('jira_cloud_id');
+  var base = 'https://api.atlassian.com/ex/jira/' + cloudId;
+  var opts = options || {};
+  opts.headers = Object.assign({ 'Authorization': 'Bearer ' + token, 'Accept': 'application/json', 'Content-Type': 'application/json' }, opts.headers || {});
+  return fetch(base + path, opts);
+}
+
+async function fetchJiraCloudId() {
+  var token = localStorage.getItem('jira_access_token');
+  var resp = await fetch('https://api.atlassian.com/oauth/token/accessible-resources', {
+    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
   });
-}
-
-function clearJiraCredentials() {
-  localStorage.removeItem('jira_email');
-  localStorage.removeItem('jira_token');
-  var emailEl = document.getElementById('jira-email');
-  var tokenEl = document.getElementById('jira-token');
-  if (emailEl) emailEl.value = '';
-  if (tokenEl) tokenEl.value = '';
-  var status = document.getElementById('jira-status');
-  if (status) { status.textContent = 'Credentials cleared.'; status.style.color = 'rgba(255,255,255,0.55)'; }
-}
-
-function testJiraConnection(cb) {
-  fetch('https://' + JIRA_SITE + '/rest/api/3/myself', {
-    headers: {
-      'Authorization': jiraAuthHeader(),
-      'Accept': 'application/json'
-    }
-  })
-  .then(function(r) {
-    if (r.ok) return r.json().then(function(d) { cb(true, '✓ Connected as ' + (d.displayName || d.emailAddress)); });
-    else cb(false, '✗ Auth failed — check email and token.');
-  })
-  .catch(function() { cb(false, '✗ Connection error — check your network.'); });
-}
-
-function loadJiraCredentials() {
-  var email = localStorage.getItem('jira_email');
-  var token = localStorage.getItem('jira_token');
-  var emailEl = document.getElementById('jira-email');
-  var tokenEl = document.getElementById('jira-token');
-  if (email && emailEl) emailEl.value = email;
-  if (token && tokenEl) tokenEl.value = token;
-  if (email && token) {
-    var status = document.getElementById('jira-status');
-    if (status) { status.textContent = '✓ Credentials saved'; status.style.color = 'rgba(160,255,180,0.9)'; }
+  var sites = await resp.json();
+  var site = sites.find(function(s) { return s.url.includes(JIRA_SITE); }) || sites[0];
+  if (site) {
+    localStorage.setItem('jira_cloud_id', site.id);
+    localStorage.setItem('jira_site_name', site.name);
   }
+}
+
+async function fetchJiraUserInfo() {
+  var token = localStorage.getItem('jira_access_token');
+  var resp = await fetch('https://api.atlassian.com/me', {
+    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
+  });
+  var user = await resp.json();
+  localStorage.setItem('jira_user_name', user.name || user.nickname || '');
+  localStorage.setItem('jira_user_email', user.email || '');
+  localStorage.setItem('jira_account_id', user.account_id || '');
 }
 
 function isJiraConnected() {
-  return !!(localStorage.getItem('jira_email') && localStorage.getItem('jira_token'));
+  return !!(localStorage.getItem('jira_access_token') && localStorage.getItem('jira_cloud_id'));
+}
+
+function disconnectJira() {
+  ['jira_access_token','jira_refresh_token','jira_token_expiry','jira_cloud_id','jira_site_name','jira_user_name','jira_user_email','jira_account_id','jira_pkce_verifier','jira_oauth_state'].forEach(function(k) { localStorage.removeItem(k); });
+  updateJiraUI();
+}
+
+function updateJiraUI() {
+  var connected = isJiraConnected();
+  var connView = document.getElementById('jira-connected-view');
+  var discView = document.getElementById('jira-disconnected-view');
+  if (connView) connView.style.display = connected ? 'flex' : 'none';
+  if (discView) discView.style.display = connected ? 'none' : 'flex';
+  if (connected) {
+    var nameEl = document.getElementById('jira-user-name');
+    var emailEl = document.getElementById('jira-user-email');
+    if (nameEl) nameEl.textContent = localStorage.getItem('jira_user_name') || 'Connected';
+    if (emailEl) emailEl.textContent = localStorage.getItem('jira_user_email') || '';
+  }
+}
+
+function loadJiraCredentials() {
+  updateJiraUI();
 }
 
 // Title editing
@@ -1340,6 +1441,8 @@ localStorage.removeItem('ltt_gradient');
 loadGradientSetting();
 loadTitle();
 loadBgImage();
+// Handle OAuth callback if returning from Atlassian
+if (window.location.search.includes('code=')) { handleOAuthCallback(); }
 renderToday();
 // drag drop inits after each renderToday call
 </script>
