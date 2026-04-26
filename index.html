@@ -998,7 +998,11 @@ async function handleOAuthCallback() {
         redirect_uri: JIRA_REDIRECT_URI
       })
     });
-    if (!resp.ok) throw new Error('Token exchange failed');
+    if (!resp.ok) {
+      var errBody = await resp.text();
+      console.error('Token exchange error body:', errBody);
+      throw new Error('Token exchange failed: ' + errBody);
+    }
     var data = await resp.json();
     localStorage.setItem('jira_access_token', data.access_token);
     if (data.refresh_token) localStorage.setItem('jira_refresh_token', data.refresh_token);
