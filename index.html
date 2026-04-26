@@ -995,7 +995,8 @@ async function handleOAuthCallback() {
         client_id: JIRA_CLIENT_ID,
         client_secret: clientSecret,
         code: code,
-        redirect_uri: JIRA_REDIRECT_URI
+        redirect_uri: JIRA_REDIRECT_URI,
+        code_verifier: verifier
       })
     });
     if (!resp.ok) {
