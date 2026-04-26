@@ -445,7 +445,12 @@ function loadEntries() {
         ms: Number(e.ms) || 0,
         ts: Number(e.ts),
         colorIdx: Number(e.colorIdx) || 0,
-        untracked: !!e.untracked
+        untracked: !!e.untracked,
+        sortOrder: e.sortOrder,
+        jiraKey: e.jiraKey || null,
+        jiraSummary: e.jiraSummary || null,
+        jiraDesc: e.jiraDesc || '',
+        jiraSent: !!e.jiraSent
       }))
       .filter(e => !isNaN(e.id) && (e.untracked || (e.ts > cutoff && !isNaN(e.ts))));
   } catch(err) { return []; }
