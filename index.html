@@ -9,7 +9,7 @@
 
 :root {
   --grad: linear-gradient(135deg, #7090d0 0%, #9060c8 35%, #b060a0 65%, #d07090 100%);
-  --text: rgba(255,255,255,1); --text2: rgba(255,255,255,0.52);
+  --text: rgba(255,255,255,1); --text2: rgba(255,255,255,0.68);
   --danger: rgba(255,180,180,0.95); --danger-bg: rgba(255,80,80,0.14);
   --radius: 16px; --radius-lg: 24px; --radius-sm: 99px;
   /* liquid glass tokens */
@@ -24,7 +24,7 @@
 }
 :root.dark {
   --grad: linear-gradient(135deg, #030810 0%, #090318 50%, #03080e 100%);
-  --text: rgba(255,255,255,1); --text2: rgba(255,255,255,0.42);
+  --text: rgba(255,255,255,1); --text2: rgba(255,255,255,0.62);
   --danger: rgba(255,160,160,0.9); --danger-bg: rgba(255,80,80,0.1);
   --radius: 16px; --radius-lg: 24px; --radius-sm: 99px;
   --liq-bg: rgba(255,255,255,0.05);
@@ -40,13 +40,16 @@
 html, body { min-height: 100%; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--grad); background-attachment: fixed; color: var(--text); min-height: 100vh; position: relative; }
 .app { position: relative; z-index: 1; max-width: 560px; margin: 0 auto; padding: 2rem 1rem 3rem; }
+.bg-orbs { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.bg-orb { position: absolute; border-radius: 50%; filter: blur(60px); }
 #grain-overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.08; background-repeat: repeat; background-size: 128px 128px; }
 
 /* Orbs behind main panel */
-.glass-app { position: relative; overflow: hidden; border-radius: var(--radius-lg); padding: 1.5rem 1.5rem 2rem; background: var(--liq-bg); border: 1px solid var(--liq-border); box-shadow: var(--liq-shadow); }
-.glass-app::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 60px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: linear-gradient(90deg, rgba(255,160,210,0.08) 0%, rgba(180,140,255,0.1) 25%, rgba(120,190,255,0.08) 50%, rgba(160,255,200,0.05) 75%, rgba(255,220,140,0.06) 100%); pointer-events: none; z-index: 0; }
-.glass-app::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: rgba(255,255,255,0.45); border-radius: var(--radius-lg) var(--radius-lg) 0 0; pointer-events: none; z-index: 1; }
+.glass-app { position: relative; overflow: hidden; border-radius: var(--radius-lg); padding: 1.5rem 1.5rem 2rem; background: var(--liq-bg); border: 1px solid var(--liq-border); box-shadow: var(--liq-shadow); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); }
+.glass-app::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 80px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 40%, transparent 100%); pointer-events: none; z-index: 0; }
+.glass-app::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), rgba(255,255,255,0.8), rgba(255,255,255,0.6), transparent); border-radius: var(--radius-lg) var(--radius-lg) 0 0; pointer-events: none; z-index: 1; }
 .glass-app > * { position: relative; z-index: 2; }
+.glass-header-divider { height: 1px; background: rgba(255,255,255,0.15); margin: 0 0 1.25rem; }
 
 h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 
@@ -56,9 +59,10 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .theme-toggle:hover { background: rgba(255,255,255,0.2); }
 
 /* Tabs */
-.tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.2); }
-.tab { padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; background: none; color: rgba(255,255,255,0.42); border-bottom: 2px solid transparent; margin-bottom: -1px; }
-.tab.active { color: white; border-bottom-color: white; }
+.tabs { display: flex; justify-content: center; margin-bottom: 1.5rem; }
+.tabs-inner { display: inline-flex; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.22); border-top-color: rgba(255,255,255,0.4); border-radius: 99px; padding: 4px; gap: 2px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.tab { padding: 7px 16px; border-radius: 99px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: none; color: rgba(255,255,255,0.5); transition: color 0.15s; white-space: nowrap; }
+.tab.active { color: white; font-weight: 600; background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); border-top-color: rgba(255,255,255,0.75); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 8px rgba(0,0,0,0.1); }
 .section { display: none; } .section.active { display: block; }
 
 /* Timer area */
@@ -81,7 +85,11 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .btn { position: relative; overflow: hidden; padding: 10px 26px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; color: white; background: var(--liq-bg); border: 1px solid var(--liq-border); box-shadow: var(--liq-shadow-sm); }
 .btn::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%; background: var(--liq-shimmer); border-radius: var(--radius-sm) var(--radius-sm) 0 0; pointer-events: none; }
 .btn:hover { background: rgba(255,255,255,0.2); }
-.btn:active { transform: scale(0.97); }
+.btn:active { transform: scale(0.97); backdrop-filter: blur(28px) saturate(200%); -webkit-backdrop-filter: blur(28px) saturate(200%); }
+.btn-add:active { backdrop-filter: blur(28px) saturate(200%); -webkit-backdrop-filter: blur(28px) saturate(200%); }
+.btn-track:active { backdrop-filter: blur(28px) saturate(200%); -webkit-backdrop-filter: blur(28px) saturate(200%); }
+.theme-toggle:active { backdrop-filter: blur(28px) saturate(200%); -webkit-backdrop-filter: blur(28px) saturate(200%); }
+.jira-tab-btn:active, .mode-btn:active { backdrop-filter: blur(28px) saturate(200%); -webkit-backdrop-filter: blur(28px) saturate(200%); }
 .btn.primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); border-color: rgba(255,255,255,0.8); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 12px rgba(255,255,255,0.12); }
 .btn.primary::after { background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, transparent 100%); }
 .btn.primary:hover { filter: brightness(1.05); }
@@ -101,7 +109,7 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .entry-card:first-child { border-top: none; padding-top: 4px; }
 .entry-info { flex: 1; min-width: 0; }
 .entry-name { font-size: 14px; font-weight: 600; overflow: visible; display: flex; align-items: center; flex-wrap: nowrap; gap: 0; }
-.entry-meta { font-size: 12px; margin-top: 2px; opacity: 0.5; }
+.entry-meta { font-size: 12px; margin-top: 2px; color: var(--text2); }
 .entry-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .entry-time { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
@@ -134,20 +142,28 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .history-day-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.06em; }
 .history-day-total { font-size: 13px; font-weight: 700; color: white; }
 .empty { text-align: center; color: rgba(255,255,255,0.42); font-size: 14px; padding: 2.5rem 0; }
+.bulk-entry-row { display: flex; align-items: flex-start; gap: 12px; padding: 11px 14px; border-radius: 14px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); cursor: pointer; transition: background 0.1s; }
+.bulk-entry-row:hover { background: rgba(255,255,255,0.16); }
+.bulk-entry-row.deselected { opacity: 0.45; }
+.bulk-checkbox { width: 18px; height: 18px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.1); flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.bulk-checkbox.checked { background: rgba(255,255,255,0.88); border-color: white; }
+.bulk-section-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.08em; margin: 8px 0 4px; padding: 0 2px; }
 .entry-desc { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
 .entry-desc:hover { color: rgba(255,255,255,0.7); }
 
 /* Jira picker */
 .jira-picker { margin-bottom: 1rem; }
 .jira-picker-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
-.jira-tab-btn { padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
-.jira-tab-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+.jira-tab-btn { position: relative; overflow: hidden; padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--liq-border); background: var(--liq-bg); color: rgba(255,255,255,0.65); box-shadow: var(--liq-shadow-sm); }
+.jira-tab-btn::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: var(--liq-shimmer); border-radius:99px; pointer-events:none; }
+.jira-tab-btn:hover { background: rgba(255,255,255,0.2); }
+.jira-tab-btn.active { background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); border-top-color: rgba(255,255,255,0.75); color: white; font-weight: 600; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 8px rgba(0,0,0,0.1); }
 .jira-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
-.jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); color: white; outline: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2); }
+.jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: var(--input-bg); border: 1px solid var(--liq-border); color: white; outline: none; box-shadow: var(--liq-shadow-sm); }
 .jira-search-row input::placeholder { color: rgba(255,255,255,0.4); }
 .jira-results { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-.jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); transition: background 0.1s; }
-.jira-result-item:hover { background: rgba(255,255,255,0.18); }
+.jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: var(--liq-bg); border: 1px solid var(--liq-border); border-top-color: var(--glass-border-top, rgba(255,255,255,0.45)); box-shadow: var(--liq-shadow-sm); transition: background 0.1s; }
+.jira-result-item:hover { background: rgba(255,255,255,0.2); }
 .jira-result-key { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); white-space: nowrap; min-width: 56px; }
 .jira-result-name { font-size: 13px; font-weight: 500; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jira-result-project { font-size: 11px; color: rgba(255,255,255,0.45); white-space: nowrap; }
@@ -157,20 +173,25 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .jira-loading { text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; padding: 1.5rem 0; }
 .jira-issue-key-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); margin-left: 6px; display: inline-flex; align-items: center; vertical-align: middle; }
 .add-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
-.mode-btn { padding: 7px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
-.mode-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+.mode-btn { position: relative; overflow: hidden; padding: 7px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--liq-border); background: var(--liq-bg); color: rgba(255,255,255,0.65); box-shadow: var(--liq-shadow-sm); }
+.mode-btn::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: var(--liq-shimmer); border-radius:99px; pointer-events:none; }
+.mode-btn:hover { background: rgba(255,255,255,0.2); }
+.mode-btn:active { backdrop-filter: blur(28px) saturate(200%); -webkit-backdrop-filter: blur(28px) saturate(200%); }
+.mode-btn.active { background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); border-top-color: rgba(255,255,255,0.75); color: white; font-weight: 600; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 8px rgba(0,0,0,0.1); }
 
 /* Jira picker */
 .jira-picker { margin-bottom: 1rem; }
 .jira-picker-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
-.jira-tab-btn { padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
-.jira-tab-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+.jira-tab-btn { position: relative; overflow: hidden; padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--liq-border); background: var(--liq-bg); color: rgba(255,255,255,0.65); box-shadow: var(--liq-shadow-sm); }
+.jira-tab-btn::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: var(--liq-shimmer); border-radius:99px; pointer-events:none; }
+.jira-tab-btn:hover { background: rgba(255,255,255,0.2); }
+.jira-tab-btn.active { background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); border-top-color: rgba(255,255,255,0.75); color: white; font-weight: 600; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 8px rgba(0,0,0,0.1); }
 .jira-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
-.jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); color: white; outline: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.2); }
+.jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: var(--input-bg); border: 1px solid var(--liq-border); color: white; outline: none; box-shadow: var(--liq-shadow-sm); }
 .jira-search-row input::placeholder { color: rgba(255,255,255,0.4); }
 .jira-results { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-.jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); transition: background 0.1s; }
-.jira-result-item:hover { background: rgba(255,255,255,0.18); }
+.jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: var(--liq-bg); border: 1px solid var(--liq-border); border-top-color: var(--glass-border-top, rgba(255,255,255,0.45)); box-shadow: var(--liq-shadow-sm); transition: background 0.1s; }
+.jira-result-item:hover { background: rgba(255,255,255,0.2); }
 .jira-result-key { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); white-space: nowrap; min-width: 56px; }
 .jira-result-name { font-size: 13px; font-weight: 500; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jira-result-project { font-size: 11px; color: rgba(255,255,255,0.45); white-space: nowrap; }
@@ -180,8 +201,11 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .jira-loading { text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; padding: 1.5rem 0; }
 .jira-issue-key-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); margin-left: 6px; display: inline-flex; align-items: center; vertical-align: middle; }
 .add-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
-.mode-btn { padding: 7px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.28); background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); }
-.mode-btn.active { background: rgba(255,255,255,0.88); color: #2a0a50; border-color: rgba(255,255,255,0.95); }
+.mode-btn { position: relative; overflow: hidden; padding: 7px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--liq-border); background: var(--liq-bg); color: rgba(255,255,255,0.65); box-shadow: var(--liq-shadow-sm); }
+.mode-btn::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: var(--liq-shimmer); border-radius:99px; pointer-events:none; }
+.mode-btn:hover { background: rgba(255,255,255,0.2); }
+.mode-btn:active { backdrop-filter: blur(28px) saturate(200%); -webkit-backdrop-filter: blur(28px) saturate(200%); }
+.mode-btn.active { background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); border-top-color: rgba(255,255,255,0.75); color: white; font-weight: 600; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 8px rgba(0,0,0,0.1); }
 
 /* Weekly */
 .weekly-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
@@ -257,15 +281,26 @@ input[type="color"] {
 <body>
 <div class="app"><div class="glass-app">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-    <h1 id="app-title" style="margin-bottom:0;cursor:pointer;user-select:none;" onclick="startEditTitle()" title="Click to rename">LTT — Lucy's Time Tracker</h1>
-    <input id="app-title-input" type="text" maxlength="40" onblur="saveTitle()" onkeydown="if(event.key==='Enter')saveTitle();if(event.key==='Escape')cancelEditTitle();" style="display:none;font-size:18px;font-weight:700;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:99px;color:white;padding:4px 14px;outline:none;width:280px;" />
+    <div style="display:flex;align-items:center;gap:10px;">
+      <!-- LTT liquid glass badge — not editable -->
+      <div style="position:relative;width:36px;height:36px;flex-shrink:0;border-radius:50%;background:var(--liq-bg);border:1px solid var(--liq-border);border-top-color:var(--glass-border-top, rgba(255,255,255,0.55));box-shadow:var(--liq-shadow-sm);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.3),transparent);border-radius:50% 50% 0 0;pointer-events:none;"></div>
+        <span style="font-size:10px;font-weight:800;color:white;letter-spacing:0.3px;position:relative;text-shadow:0 1px 3px rgba(60,20,120,0.3);">LTT</span>
+      </div>
+      <!-- Editable name -->
+      <h1 id="app-title" style="margin-bottom:0;cursor:pointer;user-select:none;font-size:16px;" onclick="startEditTitle()" title="Click to rename">Lucy's Time Tracker</h1>
+      <input id="app-title-input" type="text" maxlength="40" onblur="saveTitle()" onkeydown="if(event.key==='Enter')saveTitle();if(event.key==='Escape')cancelEditTitle();" style="display:none;font-size:16px;font-weight:700;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:99px;color:white;padding:4px 14px;outline:none;width:220px;" />
+    </div>
     <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">Dark</button>
   </div>
+  <div class="glass-header-divider"></div>
   <div class="tabs">
-    <button class="tab active" onclick="showTab('tracker')">Timer</button>
-    <button class="tab" onclick="showTab('history')">History</button>
-    <button class="tab" onclick="showTab('weekly')">Weekly</button>
-    <button class="tab" onclick="showTab('settings')">Settings</button>
+    <div class="tabs-inner">
+      <button class="tab active" onclick="showTab('tracker')">Timer</button>
+      <button class="tab" onclick="showTab('history')">History</button>
+      <button class="tab" onclick="showTab('weekly')">Weekly</button>
+      <button class="tab" onclick="showTab('settings')">Settings</button>
+    </div>
   </div>
 
   <div id="tab-tracker" class="section active">
@@ -274,14 +309,14 @@ input[type="color"] {
       <svg id="timer-svg" width="260" height="72" viewBox="0 0 260 72">
           <defs>
             <linearGradient id="tgFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stop-color="rgba(255,255,255,0.85)"/>
-              <stop offset="28%"  stop-color="rgba(220,210,255,0.18)"/>
-              <stop offset="62%"  stop-color="rgba(190,175,240,0.07)"/>
-              <stop offset="100%" stop-color="rgba(255,255,255,0.38)"/>
+              <stop offset="0%"   stop-color="rgba(255,255,255,0.98)"/>
+              <stop offset="28%"  stop-color="rgba(235,225,255,0.55)"/>
+              <stop offset="62%"  stop-color="rgba(210,195,255,0.28)"/>
+              <stop offset="100%" stop-color="rgba(255,255,255,0.75)"/>
             </linearGradient>
             <linearGradient id="tgStroke" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stop-color="rgba(255,255,255,0.9)"/>
-              <stop offset="100%" stop-color="rgba(210,195,255,0.2)"/>
+              <stop offset="0%"   stop-color="rgba(255,255,255,0.95)"/>
+              <stop offset="100%" stop-color="rgba(220,205,255,0.45)"/>
             </linearGradient>
           </defs>
           <text id="display" x="50%" y="56" text-anchor="middle"
@@ -325,9 +360,10 @@ input[type="color"] {
       <button class="btn danger" id="btn-save" onclick="saveEntry()" disabled>Save</button>
     </div>
 
-    <div class="today-total">
+    <div class="today-total" style="position:relative;">
       <span class="label">Total today</span>
       <span class="val" id="today-total">0h 00m</span>
+      <button onclick="showBulkJiraModal()" id="bulk-jira-btn" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:5px 12px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,255,180,0.95);background:rgba(160,255,180,0.12);border:1px solid rgba(160,255,180,0.3);white-space:nowrap;">↑ Send to Jira</button>
     </div>
     <div id="today-entries" class="entries-list"></div>
   </div>
@@ -810,6 +846,7 @@ function renderToday() {
     '</div>';
   }).join('');
   initDragDrop();
+  updateBulkJiraBtn();
 }
 
 function renderHistory() {
@@ -1457,8 +1494,8 @@ async function jiraBrowse(level, key, name) {
       '<span style="color:rgba(255,255,255,0.4)">›</span>' +
       '<span style="color:white">' + esc(name) + '</span>';
     try {
-      var jql = 'project = ' + key + ' ORDER BY updated DESC';
-      var resp2 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent(jql) + '&maxResults=30&fields=summary,issuetype,status');
+      var jql = 'project = "' + key + '" ORDER BY updated DESC';
+      var resp2 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent(jql) + '&maxResults=50&fields=summary,issuetype,status,parent');
       var data2 = await resp2.json();
       var issues = data2.issues || [];
       if (!issues.length) { res.innerHTML = '<div class="jira-loading">No issues in this project</div>'; return; }
@@ -1694,6 +1731,297 @@ async function sendWorklogToJira(id) {
   }
 }
 
+// ---- BULK JIRA UPLOAD ----
+var _bulkSelected = {};
+
+function getBulkEntries() {
+  var entries = loadEntries();
+  var now = Date.now();
+  var todayKey = dayKey(now);
+  var twoWeeksAgo = now - 14 * 24 * 3600 * 1000;
+
+  var todayEntries = entries.filter(function(e) {
+    return e.jiraKey && !e.jiraSent && e.ms > 0 && dayKey(e.ts) === todayKey;
+  });
+  var olderEntries = entries.filter(function(e) {
+    return e.jiraKey && !e.jiraSent && e.ms > 0 && dayKey(e.ts) !== todayKey && e.ts > twoWeeksAgo;
+  }).sort(function(a,b) { return b.ts - a.ts; });
+
+  return { today: todayEntries, older: olderEntries };
+}
+
+function showBulkJiraModal() {
+  if (!isJiraConnected()) {
+    alert('Please connect to Jira in Settings first.');
+    return;
+  }
+  var data = getBulkEntries();
+  var all = data.today.concat(data.older);
+  if (!all.length) {
+    alert('No unsent Jira entries found.');
+    return;
+  }
+
+  // Select all by default
+  _bulkSelected = {};
+  all.forEach(function(e) { _bulkSelected[e.id] = true; });
+
+  var dark = isDarkMode();
+  var panel = document.getElementById('bulk-jira-panel');
+  panel.style.background = dark ? 'rgba(15,8,35,0.88)' : 'rgba(200,185,240,0.82)';
+  panel.style.border = '1px solid rgba(255,255,255,' + (dark?'0.14':'0.45') + ')';
+  panel.style.backdropFilter = 'blur(32px)';
+  panel.style.webkitBackdropFilter = 'blur(32px)';
+
+  renderBulkList(data);
+
+  var modal = document.getElementById('bulk-jira-modal');
+  modal.style.display = 'flex';
+}
+
+function renderBulkList(data) {
+  var list = document.getElementById('bulk-jira-list');
+  var html = '';
+
+  if (data.today.length) {
+    html += '<div class="bulk-section-label">Today</div>';
+    html += data.today.map(function(e) { return bulkEntryHTML(e); }).join('');
+  }
+  if (data.older.length) {
+    html += '<div class="bulk-section-label">Older (unsent)</div>';
+    html += data.older.map(function(e) { return bulkEntryHTML(e); }).join('');
+  }
+  list.innerHTML = html;
+  updateBulkCount();
+}
+
+function bulkEntryHTML(e) {
+  var checked = _bulkSelected[e.id];
+  var mins = Math.ceil(e.ms / 60000);
+  var dateStr = new Date(e.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  return '<div class="bulk-entry-row' + (checked ? '' : ' deselected') + '" id="bulk-row-' + e.id + '" onclick="toggleBulkEntry(' + e.id + ')">' +
+    '<div class="bulk-checkbox' + (checked ? ' checked' : '') + '" id="bulk-chk-' + e.id + '">' +
+      (checked ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="' + (isDarkMode()?'#0e041c':'#2a0a50') + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') +
+    '</div>' +
+    '<div style="flex:1;min-width:0;">' +
+      '<div style="display:flex;align-items:center;gap:6px;">' +
+        '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:99px;padding:1px 7px;">' + esc(e.jiraKey) + '</span>' +
+        '<span style="font-size:13px;font-weight:600;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(e.jiraSummary || e.name) + '</span>' +
+      '</div>' +
+      (e.jiraDesc ? '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">' + esc(e.jiraDesc) + '</div>' : '') +
+    '</div>' +
+    '<div style="text-align:right;flex-shrink:0;">' +
+      '<div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);">' + mins + 'm</div>' +
+      '<div style="font-size:10px;color:rgba(255,255,255,0.45);">' + dateStr + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function toggleBulkEntry(id) {
+  _bulkSelected[id] = !_bulkSelected[id];
+  var row = document.getElementById('bulk-row-' + id);
+  var chk = document.getElementById('bulk-chk-' + id);
+  if (row) row.classList.toggle('deselected', !_bulkSelected[id]);
+  if (chk) {
+    chk.classList.toggle('checked', !!_bulkSelected[id]);
+    chk.innerHTML = _bulkSelected[id] ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="' + (isDarkMode()?'#0e041c':'#2a0a50') + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
+  }
+  updateBulkCount();
+}
+
+function updateBulkCount() {
+  var count = Object.values(_bulkSelected).filter(Boolean).length;
+  var el = document.getElementById('bulk-selected-count');
+  if (el) el.textContent = count + ' entr' + (count === 1 ? 'y' : 'ies') + ' selected';
+  var btn = document.getElementById('bulk-send-btn');
+  if (btn) btn.disabled = count === 0;
+}
+
+function closeBulkModal() {
+  document.getElementById('bulk-jira-modal').style.display = 'none';
+}
+
+async function sendBulkToJira() {
+  var selectedIds = Object.keys(_bulkSelected).filter(function(id) { return _bulkSelected[id]; });
+  if (!selectedIds.length) return;
+
+  var btn = document.getElementById('bulk-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+
+  var entries = loadEntries();
+  var errors = [];
+  var successCount = 0;
+
+  for (var i = 0; i < selectedIds.length; i++) {
+    var id = Number(selectedIds[i]);
+    var entry = entries.find(function(e) { return e.id === id; });
+    if (!entry) continue;
+
+    var mins = Math.ceil(entry.ms / 60000);
+    if (mins < 1) mins = 1;
+    var trackDate = new Date(entry.ts);
+    var dateStr = trackDate.getFullYear() + '-' + String(trackDate.getMonth()+1).padStart(2,'0') + '-' + String(trackDate.getDate()).padStart(2,'0') + 'T' + String(trackDate.getHours()).padStart(2,'0') + ':' + String(trackDate.getMinutes()).padStart(2,'0') + ':00.000+0000';
+
+    var body = { timeSpentSeconds: mins * 60, started: dateStr };
+    if (entry.jiraDesc) body.comment = { type:'doc', version:1, content:[{ type:'paragraph', content:[{ type:'text', text:entry.jiraDesc }] }] };
+
+    try {
+      var resp = await jiraFetch('/rest/api/3/issue/' + entry.jiraKey + '/worklog', {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      // Mark sent
+      var idx = entries.findIndex(function(e) { return e.id === id; });
+      if (idx > -1) { entries[idx].jiraSent = true; entries[idx].untracked = false; }
+      successCount++;
+    } catch(e) {
+      errors.push(entry.jiraKey + ': ' + (e.message || 'failed'));
+    }
+  }
+
+  saveEntries(entries);
+  closeBulkModal();
+  renderToday();
+  renderHistory();
+  updateBulkJiraBtn();
+
+  if (errors.length) {
+    alert('Sent ' + successCount + ' worklogs. Failed: ' + errors.join(', '));
+  }
+}
+
+function updateBulkJiraBtn() {
+  var btn = document.getElementById('bulk-jira-btn');
+  if (!btn) return;
+  var data = getBulkEntries();
+  var hasEntries = (data.today.length + data.older.length) > 0;
+  btn.style.display = (isJiraConnected() && hasEntries) ? 'block' : 'none';
+}
+
+// ---- BULK JIRA UPLOAD ----
+var _bulkSelected = {};
+
+function getBulkEntries() {
+  var entries = loadEntries();
+  var now = Date.now();
+  var todayKey = dayKey(now);
+  var twoWeeksAgo = now - 14 * 24 * 3600 * 1000;
+  var todayEntries = entries.filter(function(e) { return e.jiraKey && !e.jiraSent && e.ms > 0 && dayKey(e.ts) === todayKey; });
+  var olderEntries = entries.filter(function(e) { return e.jiraKey && !e.jiraSent && e.ms > 0 && dayKey(e.ts) !== todayKey && e.ts > twoWeeksAgo; }).sort(function(a,b) { return b.ts - a.ts; });
+  return { today: todayEntries, older: olderEntries };
+}
+
+function showBulkJiraModal() {
+  if (!isJiraConnected()) { alert('Please connect to Jira in Settings first.'); return; }
+  var data = getBulkEntries();
+  var all = data.today.concat(data.older);
+  if (!all.length) { alert('No unsent Jira entries found.'); return; }
+  _bulkSelected = {};
+  all.forEach(function(e) { _bulkSelected[e.id] = true; });
+  var dark = isDarkMode();
+  var panel = document.getElementById('bulk-jira-panel');
+  panel.style.background = dark ? 'rgba(15,8,35,0.88)' : 'rgba(200,185,240,0.82)';
+  panel.style.border = '1px solid rgba(255,255,255,' + (dark?'0.14':'0.45') + ')';
+  panel.style.backdropFilter = 'blur(32px)';
+  panel.style.webkitBackdropFilter = 'blur(32px)';
+  renderBulkList(data);
+  document.getElementById('bulk-jira-modal').style.display = 'flex';
+}
+
+function renderBulkList(data) {
+  var list = document.getElementById('bulk-jira-list');
+  var html = '';
+  if (data.today.length) { html += '<div class="bulk-section-label">Today</div>' + data.today.map(bulkEntryHTML).join(''); }
+  if (data.older.length) { html += '<div class="bulk-section-label">Older (unsent)</div>' + data.older.map(bulkEntryHTML).join(''); }
+  list.innerHTML = html;
+  updateBulkCount();
+}
+
+function bulkEntryHTML(e) {
+  var checked = _bulkSelected[e.id];
+  var mins = Math.ceil(e.ms / 60000);
+  var dateStr = new Date(e.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  var dark = isDarkMode();
+  return '<div class="bulk-entry-row' + (checked ? '' : ' deselected') + '" id="bulk-row-' + e.id + '" onclick="toggleBulkEntry(' + e.id + ')">' +
+    '<div class="bulk-checkbox' + (checked ? ' checked' : '') + '" id="bulk-chk-' + e.id + '">' +
+      (checked ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="' + (dark?'#0e041c':'#2a0a50') + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') +
+    '</div>' +
+    '<div style="flex:1;min-width:0;">' +
+      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">' +
+        '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:99px;padding:1px 7px;flex-shrink:0;">' + esc(e.jiraKey) + '</span>' +
+        '<span style="font-size:13px;font-weight:600;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(e.jiraSummary || e.name) + '</span>' +
+      '</div>' +
+      (e.jiraDesc ? '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">' + esc(e.jiraDesc) + '</div>' : '') +
+    '</div>' +
+    '<div style="text-align:right;flex-shrink:0;margin-left:8px;">' +
+      '<div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);">' + mins + 'm</div>' +
+      '<div style="font-size:10px;color:rgba(255,255,255,0.45);">' + dateStr + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function toggleBulkEntry(id) {
+  _bulkSelected[id] = !_bulkSelected[id];
+  var row = document.getElementById('bulk-row-' + id);
+  var chk = document.getElementById('bulk-chk-' + id);
+  var dark = isDarkMode();
+  if (row) row.classList.toggle('deselected', !_bulkSelected[id]);
+  if (chk) { chk.classList.toggle('checked', !!_bulkSelected[id]); chk.innerHTML = _bulkSelected[id] ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="' + (dark?'#0e041c':'#2a0a50') + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''; }
+  updateBulkCount();
+}
+
+function updateBulkCount() {
+  var count = Object.values(_bulkSelected).filter(Boolean).length;
+  var el = document.getElementById('bulk-selected-count');
+  if (el) el.textContent = count + ' entr' + (count === 1 ? 'y' : 'ies') + ' selected';
+  var btn = document.getElementById('bulk-send-btn');
+  if (btn) btn.disabled = count === 0;
+}
+
+function closeBulkModal() {
+  document.getElementById('bulk-jira-modal').style.display = 'none';
+}
+
+async function sendBulkToJira() {
+  var selectedIds = Object.keys(_bulkSelected).filter(function(id) { return _bulkSelected[id]; });
+  if (!selectedIds.length) return;
+  var btn = document.getElementById('bulk-send-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+  var entries = loadEntries();
+  var errors = [];
+  var successCount = 0;
+  for (var i = 0; i < selectedIds.length; i++) {
+    var id = Number(selectedIds[i]);
+    var entry = entries.find(function(e) { return e.id === id; });
+    if (!entry) continue;
+    var mins = Math.ceil(entry.ms / 60000); if (mins < 1) mins = 1;
+    var trackDate = new Date(entry.ts);
+    var dateStr = trackDate.getFullYear() + '-' + String(trackDate.getMonth()+1).padStart(2,'0') + '-' + String(trackDate.getDate()).padStart(2,'0') + 'T' + String(trackDate.getHours()).padStart(2,'0') + ':' + String(trackDate.getMinutes()).padStart(2,'0') + ':00.000+0000';
+    var body = { timeSpentSeconds: mins * 60, started: dateStr };
+    if (entry.jiraDesc) body.comment = { type:'doc', version:1, content:[{ type:'paragraph', content:[{ type:'text', text:entry.jiraDesc }] }] };
+    try {
+      var resp = await jiraFetch('/rest/api/3/issue/' + entry.jiraKey + '/worklog', { method:'POST', body:JSON.stringify(body) });
+      if (!resp.ok) throw new Error(await resp.text());
+      var idx = entries.findIndex(function(e) { return e.id === id; });
+      if (idx > -1) { entries[idx].jiraSent = true; entries[idx].untracked = false; }
+      successCount++;
+    } catch(e) { errors.push(entry.jiraKey + ': ' + (e.message || 'failed')); }
+  }
+  saveEntries(entries);
+  closeBulkModal();
+  renderToday(); renderHistory();
+  updateBulkJiraBtn();
+  if (errors.length) alert('Sent ' + successCount + ' worklogs. Failed: ' + errors.join(', '));
+}
+
+function updateBulkJiraBtn() {
+  var btn = document.getElementById('bulk-jira-btn');
+  if (!btn) return;
+  var data = getBulkEntries();
+  btn.style.display = (isJiraConnected() && (data.today.length + data.older.length) > 0) ? 'block' : 'none';
+}
+
 // ---- DRAG AND DROP ----
 var dragSrcId = null;
 function initDragDrop() {
@@ -1906,6 +2234,12 @@ if (window.location.search.includes('code=')) { handleOAuthCallback(); }
 renderToday();
 // drag drop inits after each renderToday call
 </script>
+<div class="bg-orbs">
+  <div class="bg-orb" style="width:300px;height:300px;background:radial-gradient(circle,rgba(255,120,180,0.45),transparent 70%);top:-80px;left:-60px;"></div>
+  <div class="bg-orb" style="width:250px;height:250px;background:radial-gradient(circle,rgba(120,160,255,0.4),transparent 70%);bottom:-40px;right:-40px;"></div>
+  <div class="bg-orb" style="width:200px;height:200px;background:radial-gradient(circle,rgba(120,255,200,0.35),transparent 70%);top:40%;left:-40px;"></div>
+  <div class="bg-orb" style="width:180px;height:180px;background:radial-gradient(circle,rgba(255,200,100,0.3),transparent 70%);bottom:20%;right:10%;"></div>
+</div>
 <div id="grain-overlay"></div>
 <div id="floating-menu" style="display:none;position:fixed;z-index:99999;min-width:188px;border-radius:14px;overflow:hidden;backdrop-filter:blur(32px) saturate(180%);-webkit-backdrop-filter:blur(32px) saturate(180%);"></div>
 </body>
