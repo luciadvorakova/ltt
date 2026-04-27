@@ -1507,7 +1507,7 @@ async function jiraBrowse(level, key, name, breadcrumb) {
       var jql = isProject
         ? 'project = ' + key + ' AND parent is EMPTY ORDER BY updated DESC'
         : 'parent = ' + key + ' ORDER BY updated DESC';
-      var resp = await jiraFetch('/rest/api/3/search/jql?jql=' + encodeURIComponent(jql) + '&maxResults=50&fields=summary,issuetype,subtasks');
+      var resp = await jiraFetch('/rest/api/3/search/jql?jql=' + encodeURIComponent(jql) + '&maxResults=50&fields=summary,issuetype,subtasks,parent');
       var data = await resp.json();
       var issues = data.issues || [];
 
@@ -1526,21 +1526,25 @@ async function jiraBrowse(level, key, name, breadcrumb) {
 
       var html = logHereHtml;
       html += issues.map(function(e) {
-        var hasChildren = (e.fields.subtasks && e.fields.subtasks.length > 0);
+        // Always show drill arrow — user can choose to drill or use "Log here" at next level
         var newBc = breadcrumb.concat([{key: e.key, name: e.fields.summary, level: 'issues'}]);
-        var newBcStr = JSON.stringify(newBc).replace(/'/g, "\'");
-        if (hasChildren) {
-          // Drillable — show › arrow
+        var hasSubtasks = e.fields.subtasks && e.fields.subtasks.length > 0;
+        var isEpic = e.fields.issuetype && e.fields.issuetype.name === 'Epic';
+        // Show drill arrow for epics and items with known subtasks; show select for leaf items
+        if (isEpic || hasSubtasks) {
           return '<div class="jira-result-item" style="cursor:pointer;" data-key="' + esc(e.key) + '" data-name="' + esc(e.fields.summary) + '" data-bc="' + esc(JSON.stringify(newBc)) + '" onclick="handleJiraDrillClick(this)">' +
             '<span class="jira-result-key">' + esc(e.key) + '</span>' +
             '<span class="jira-result-name">' + esc(e.fields.summary) + '</span>' +
             '<span style="font-size:11px;color:rgba(255,255,255,0.3);margin-left:auto;">›</span>' +
           '</div>';
         } else {
-          // Leaf — select directly
-          return '<div class="jira-result-item" data-key="' + esc(e.key) + '" data-summary="' + esc(e.fields.summary) + '" onclick="handleJiraItemClick(this)">' +
-            '<span class="jira-result-key">' + esc(e.key) + '</span>' +
-            '<span class="jira-result-name">' + esc(e.fields.summary) + '</span>' +
+          // Show both options inline — drill and select
+          return '<div class="jira-result-item" style="display:flex;align-items:center;gap:0;">' +
+            '<div style="flex:1;display:flex;align-items:center;gap:10px;" data-key="' + esc(e.key) + '" data-summary="' + esc(e.fields.summary) + '" onclick="handleJiraItemClick(this)" style="cursor:pointer;">' +
+              '<span class="jira-result-key">' + esc(e.key) + '</span>' +
+              '<span class="jira-result-name">' + esc(e.fields.summary) + '</span>' +
+            '</div>' +
+            '<div data-key="' + esc(e.key) + '" data-name="' + esc(e.fields.summary) + '" data-bc="' + esc(JSON.stringify(newBc)) + '" onclick="handleJiraDrillClick(this)" style="padding:4px 8px;color:rgba(255,255,255,0.25);font-size:11px;cursor:pointer;flex-shrink:0;" title="Browse children">›</div>' +
           '</div>';
         }
       }).join('');
