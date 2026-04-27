@@ -1382,7 +1382,7 @@ function setAddMode(mode) {
       document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Please connect to Jira in Settings first.</div>';
       return;
     }
-    if (_jiraTab === 'browse') jiraBrowse('projects');
+    if (_jiraTab === 'browse') jiraBrowse('projects', null, null, []);
   }
 }
 
@@ -1390,7 +1390,7 @@ function setJiraTab(tab) {
   _jiraTab = tab;
   document.getElementById('jira-search-pane').style.display = tab === 'search' ? 'block' : 'none';
   document.getElementById('jira-browse-pane').style.display = tab === 'browse' ? 'block' : 'none';
-  if (tab === 'browse') jiraBrowse('projects');
+  if (tab === 'browse') jiraBrowse('projects', null, null, []);
 }
 
 function debounceJiraSearch(val) {
@@ -1450,66 +1450,117 @@ function renderJiraSearchResultsFull(issues) {
   }).join('');
 }
 
-async function jiraBrowse(level, key, name) {
+async function jiraBrowse(level, key, name, breadcrumb) {
   _jiraBrowseState.level = level;
   var bc = document.getElementById('jira-breadcrumb');
   var res = document.getElementById('jira-browse-results');
   res.innerHTML = '<div class="jira-loading">Loading...</div>';
 
+  // breadcrumb is an array of {key, name, level} for navigation history
+  breadcrumb = breadcrumb || [];
+
+  // Render breadcrumb
+  var bcHtml = '';
+  if (breadcrumb.length === 0) {
+    bcHtml = '<span style="color:white;font-weight:600;">All projects</span>';
+  } else {
+    bcHtml = '<span onclick="jiraBrowseProjects()" style="cursor:pointer;color:rgba(255,255,255,0.55);">All projects</span>';
+    breadcrumb.forEach(function(crumb, i) {
+      var crumbBc = breadcrumb.slice(0, i);
+      bcHtml += '<span style="color:rgba(255,255,255,0.3);margin:0 4px;">›</span>';
+      if (i < breadcrumb.length - 1) {
+        bcHtml += '<span data-idx="' + i + '" class="bc-crumb" style="cursor:pointer;color:rgba(255,255,255,0.55);">' + esc(crumb.name) + '</span>';
+      } else {
+        bcHtml += '<span style="color:white;font-weight:600;">' + esc(crumb.name) + '</span>';
+      }
+    });
+  }
+  bc.innerHTML = bcHtml;
+
+  // Attach crumb click handlers
+  bc.querySelectorAll('.bc-crumb').forEach(function(el) {
+    var idx = parseInt(el.getAttribute('data-idx'));
+    var crumb = breadcrumb[idx];
+    var prevBc = breadcrumb.slice(0, idx);
+    el.onclick = function() { jiraBrowse(crumb.level, crumb.key, crumb.name, prevBc); };
+  });
+
   if (level === 'projects') {
-    _jiraBrowseState.projectKey = null;
-    bc.innerHTML = '<span style="color:white">All projects</span>';
     try {
       var resp = await jiraFetch('/rest/api/3/project/search?maxResults=50&orderBy=name');
       var data = await resp.json();
       var projects = data.values || [];
       if (!projects.length) { res.innerHTML = '<div class="jira-loading">No projects found</div>'; return; }
       res.innerHTML = projects.map(function(p) {
-        return '<div class="jira-result-item" data-key="' + esc(p.key) + '" data-name="' + esc(p.name) + '" onclick="handleJiraProjectClick(this)">' +
+        return '<div class="jira-result-item" style="cursor:pointer;" data-key="' + esc(p.key) + '" data-name="' + esc(p.name) + '" onclick="handleJiraProjectClick(this)">' +
           '<span class="jira-result-key">' + esc(p.key) + '</span>' +
           '<span class="jira-result-name">' + esc(p.name) + '</span>' +
+          '<span style="font-size:11px;color:rgba(255,255,255,0.3);margin-left:auto;">›</span>' +
         '</div>';
       }).join('');
     } catch(e) { res.innerHTML = '<div class="jira-loading">Failed to load projects</div>'; }
 
   } else if (level === 'issues') {
-    _jiraBrowseState.projectKey = key;
-    _jiraBrowseState.projectName = name;
-    bc.innerHTML = '<span onclick="jiraBrowseProjects()">All projects</span>' +
-      '<span style="color:rgba(255,255,255,0.4)">›</span>' +
-      '<span style="color:white">' + esc(name) + '</span>';
+    // key is either a project key (top level) or an issue key (drilling into children)
+    var isProject = breadcrumb.length <= 1;
     try {
-      // Try multiple JQL formats to handle different Jira configurations
-      // Try with key first, then id, to handle different Jira configs
-      var jql = 'project = ' + key + ' ORDER BY updated DESC';
-      var resp2 = await jiraFetch('/rest/api/3/search/jql?jql=' + encodeURIComponent(jql) + '&maxResults=50&fields=summary,issuetype,status');
-      var data2 = await resp2.json();
-      console.log('Jira browse response:', data2);
-      var issues = data2.issues || [];
-      // If empty, try issue picker approach
-      if (issues.length === 0) {
-        var resp3 = await jiraFetch('/rest/api/3/search/jql?jql=' + encodeURIComponent('project+=' + key + '+ORDER+BY+updated+DESC') + '&maxResults=50&fields=summary,issuetype,status');
-        var data3 = await resp3.json();
-        console.log('Jira browse fallback:', data3);
-        issues = data3.issues || issues;
+      var jql = isProject
+        ? 'project = ' + key + ' AND parent is EMPTY ORDER BY updated DESC'
+        : 'parent = ' + key + ' ORDER BY updated DESC';
+      var resp = await jiraFetch('/rest/api/3/search/jql?jql=' + encodeURIComponent(jql) + '&maxResults=50&fields=summary,issuetype,subtasks');
+      var data = await resp.json();
+      var issues = data.issues || [];
+
+      // "Log here" option — always shown except at project level
+      var logHereHtml = !isProject
+        ? '<div class="jira-result-item" data-key="' + esc(key) + '" data-summary="' + esc(name) + '" onclick="handleJiraItemClick(this)" style="border-color:rgba(160,255,180,0.25);background:rgba(160,255,180,0.06);margin-bottom:6px;">' +
+            '<span class="jira-result-key">' + esc(key) + '</span>' +
+            '<span class="jira-result-name" style="color:rgba(160,255,180,0.9);">↳ Log to this task</span>' +
+          '</div>'
+        : '';
+
+      if (!issues.length) {
+        res.innerHTML = logHereHtml + '<div class="jira-loading">No child issues</div>';
+        return;
       }
-      if (!issues.length) { res.innerHTML = '<div class="jira-loading">No issues in this project</div>'; return; }
-      res.innerHTML = issues.map(function(issue) {
-        var summary = issue.fields ? issue.fields.summary : '';
-        return '<div class="jira-result-item" data-key="' + esc(issue.key) + '" data-summary="' + esc(summary) + '" onclick="handleJiraItemClick(this)">' +
-          '<span class="jira-result-key">' + esc(issue.key) + '</span>' +
-          '<span class="jira-result-name">' + esc(summary) + '</span>' +
-        '</div>';
+
+      var html = logHereHtml;
+      html += issues.map(function(e) {
+        var hasChildren = (e.fields.subtasks && e.fields.subtasks.length > 0);
+        var newBc = breadcrumb.concat([{key: e.key, name: e.fields.summary, level: 'issues'}]);
+        var newBcStr = JSON.stringify(newBc).replace(/'/g, "\'");
+        if (hasChildren) {
+          // Drillable — show › arrow
+          return '<div class="jira-result-item" style="cursor:pointer;" data-key="' + esc(e.key) + '" data-name="' + esc(e.fields.summary) + '" data-bc="' + esc(JSON.stringify(newBc)) + '" onclick="handleJiraDrillClick(this)">' +
+            '<span class="jira-result-key">' + esc(e.key) + '</span>' +
+            '<span class="jira-result-name">' + esc(e.fields.summary) + '</span>' +
+            '<span style="font-size:11px;color:rgba(255,255,255,0.3);margin-left:auto;">›</span>' +
+          '</div>';
+        } else {
+          // Leaf — select directly
+          return '<div class="jira-result-item" data-key="' + esc(e.key) + '" data-summary="' + esc(e.fields.summary) + '" onclick="handleJiraItemClick(this)">' +
+            '<span class="jira-result-key">' + esc(e.key) + '</span>' +
+            '<span class="jira-result-name">' + esc(e.fields.summary) + '</span>' +
+          '</div>';
+        }
       }).join('');
-    } catch(e) { res.innerHTML = '<div class="jira-loading">Failed to load issues</div>'; }
+      res.innerHTML = html;
+    } catch(e) { console.error(e); res.innerHTML = '<div class="jira-loading">Failed to load issues</div>'; }
   }
 }
 
-function jiraBrowseProjects() { jiraBrowse('projects'); }
+
+function jiraBrowseProjects() { jiraBrowse('projects', null, null, []); }
 function handleJiraProjectClick(el) {
   var key = el.getAttribute('data-key');
   var name = el.getAttribute('data-name');
-  jiraBrowse('issues', key, name);
+  jiraBrowse('issues', key, name, [{key: key, name: name, level: 'issues'}]);
+}
+function handleJiraDrillClick(el) {
+  var key = el.getAttribute('data-key');
+  var name = el.getAttribute('data-name');
+  var bc = JSON.parse(el.getAttribute('data-bc') || '[]');
+  jiraBrowse('issues', key, name, bc);
 }
 
 function handleJiraItemClick(el) {
