@@ -570,7 +570,7 @@ function toggleMenu(e, id) {
       '<button onclick="submitLog(' + id + ')" style="padding:5px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);color:#2a0a50;font-family:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,0.5)">Add</button>' +
     '</div>' +
 
-    (hasJira ? '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(160,255,180,0.9);font-weight:500;font-family:inherit" class="fm-menu-btn" onclick="showSendToJiraDialog(' + id + ')">Send to Jira</button>' : '') +
+    (entryForMenu && entryForMenu.jiraKey && !entryForMenu.jiraSent ? (entryForMenu.ms > 0 ? '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(160,255,180,0.9);font-weight:500;font-family:inherit" class="fm-menu-btn" onclick="showSendToJiraDialog(' + id + ')">Send to Jira</button>' : '<div style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;color:rgba(160,255,180,0.35);font-weight:500;">Send to Jira <span style="font-size:11px;opacity:0.6;">(track time first)</span></div>') : '') +
     (hasJira ? '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.88);font-weight:400;font-family:inherit" class="fm-menu-btn" onclick="editJiraDesc(' + id + ')">Edit description</button>' : '') +
     (isSent ? '<div style="padding:8px 16px;font-size:12px;color:rgba(160,255,180,0.7);">✓ Sent to Jira</div>' : '') +
     '<div style="height:1px;background:rgba(255,255,255,0.12);margin:4px 12px;"></div>' +
@@ -818,10 +818,9 @@ function renderToday() {
     return '<div class="entry-card" draggable="true" data-id="' + e.id + '">' +
       '<span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>' +
       '<div class="entry-info">' +
-        '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' + esc(e.jiraSummary || e.name) : esc(e.name)) + (e.untracked && e.ms === 0 ? '<span class="untracked-badge">planned</span>' : '') + '</div>' +
+        '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' + esc(e.jiraSummary || e.name) : esc(e.name))  + '</div>' +
         (e.jiraKey && !e.jiraSent ? '<div class="entry-desc" onclick="editJiraDescInline(' + e.id + ')">' + (e.jiraDesc ? esc(e.jiraDesc) : '<span style="opacity:0.4">Add description...</span>') + '</div>' : '') +
         (e.jiraKey && e.jiraSent ? '<div class="entry-desc" style="opacity:0.5;">' + (e.jiraDesc ? esc(e.jiraDesc) : '') + ' <span style="color:rgba(160,255,180,0.8)">✓ Sent</span></div>' : '') +
-        (e.ms > 0 ? '<div class="entry-meta">Last tracked ' + timeOfDay(e.ts) + '</div>' : '') +
       '</div>' +
       '<div class="entry-actions">' +
         '<span class="entry-time">' + timeDisplay + '</span>' +
@@ -859,7 +858,7 @@ function renderHistory() {
         '<div class="entry-info">' +
           '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' : '') + esc(e.jiraSummary || e.name) + '</div>' +
           (e.jiraDesc ? '<div class="entry-meta" style="margin-top:1px;">' + esc(e.jiraDesc) + '</div>' : '') +
-          '<div class="entry-meta">' + timeOfDay(e.ts) + '</div>' +
+  
         '</div>' +
         '<div class="entry-actions">' +
           '<span class="entry-time">' + fmtShort(e.ms) + '</span>' +
@@ -1439,6 +1438,7 @@ function renderJiraSearchResults(issues, query) {
 function renderJiraSearchResultsFull(issues) {
   var el = document.getElementById('jira-search-results');
   if (!issues.length) { el.innerHTML = '<div class="jira-loading">No issues found</div>'; return; }
+  var seen = {}; issues = issues.filter(function(i) { if (seen[i.key]) return false; seen[i.key] = true; return true; });
   el.innerHTML = issues.map(function(issue) {
     var summary = issue.fields ? issue.fields.summary : '';
     var project = issue.fields && issue.fields.project ? issue.fields.project.name : '';
@@ -1594,7 +1594,7 @@ function showJiraDescriptionDialog(key, summary) {
       '<textarea id="jira-desc-input" placeholder="What did you work on?" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;resize:vertical;font-family:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);"></textarea>' +
       '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">' +
         '<button onclick="closeJiraDescDialog()" style="padding:9px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Cancel</button>' +
-        '<button onclick="confirmJiraIssueFromDialog()" style="padding:9px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);">Add &amp; Track</button>' +
+        '<button onclick="confirmJiraIssueFromDialog()" style="padding:9px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);">Add</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(overlay);
@@ -1624,7 +1624,11 @@ function confirmJiraIssue(key, summary) {
   var id = Date.now();
   entries.push({ id: id, name: summary, ms: 0, ts: Date.now(), colorIdx: colorIdx, untracked: true, jiraKey: key, jiraSummary: summary, jiraDesc: desc, jiraSent: false });
   saveEntries(entries);
-  setAddMode('manual');
+  // Reset search but stay in Jira mode
+  var searchInput = document.getElementById('jira-search-input');
+  if (searchInput) { searchInput.value = ''; }
+  var searchResults = document.getElementById('jira-search-results');
+  if (searchResults) searchResults.innerHTML = '<div class="jira-loading">Type to search Jira issues</div>';
   renderToday();
 }
 
