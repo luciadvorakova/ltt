@@ -45,7 +45,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 #grain-overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.08; background-repeat: repeat; background-size: 128px 128px; }
 
 /* Orbs behind main panel */
-.glass-app { position: relative; overflow: hidden; border-radius: var(--radius-lg); padding: 1.5rem 1.5rem 2rem; background: var(--liq-bg); border: 1px solid var(--liq-border); box-shadow: var(--liq-shadow); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); min-height: 520px; }
+.glass-app { position: relative; overflow: hidden; border-radius: var(--radius-lg); padding: 1.5rem 1.5rem 2rem; background: var(--liq-bg); border: 1px solid var(--liq-border); box-shadow: var(--liq-shadow); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); }
 .glass-app::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 80px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 40%, transparent 100%); pointer-events: none; z-index: 0; }
 .glass-app::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), rgba(255,255,255,0.8), rgba(255,255,255,0.6), transparent); border-radius: var(--radius-lg) var(--radius-lg) 0 0; pointer-events: none; z-index: 1; }
 .glass-app > * { position: relative; z-index: 2; }
@@ -63,7 +63,7 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .tabs-inner { display: inline-flex; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.22); border-top-color: rgba(255,255,255,0.4); border-radius: 99px; padding: 4px; gap: 2px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .tab { padding: 7px 16px; border-radius: 99px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: none; color: rgba(255,255,255,0.5); transition: color 0.15s; white-space: nowrap; }
 .tab.active { color: white; font-weight: 600; background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.45); border-top-color: rgba(255,255,255,0.75); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 8px rgba(0,0,0,0.1); }
-.section { display: none; } .section.active { display: block; }
+.section { display: none; } .section.active { display: block; min-height: 0; }
 
 /* Timer area */
 .active-task-name { text-align: center; font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.72); margin-bottom: 8px; min-height: 22px; letter-spacing: 0.01em; }
@@ -1480,18 +1480,19 @@ async function jiraBrowse(level, key, name) {
       '<span style="color:white">' + esc(name) + '</span>';
     try {
       // Try multiple JQL formats to handle different Jira configurations
-      var jql = 'project = "' + key + '" ORDER BY updated DESC';
+      // Try with key first, then id, to handle different Jira configs
+      var jql = 'project = ' + key + ' ORDER BY updated DESC';
       var resp2 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent(jql) + '&maxResults=50&fields=summary,issuetype,status');
-      if (resp2.ok) {
-        var data2check = await resp2.clone().json();
-        if (data2check.total === 0) {
-          // Try without quotes
-          jql = 'project = ' + key + ' ORDER BY updated DESC';
-          resp2 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent(jql) + '&maxResults=50&fields=summary,issuetype,status');
-        }
-      }
       var data2 = await resp2.json();
-      var issues = data2.issues || data2.values || [];
+      console.log('Jira browse response:', data2);
+      var issues = data2.issues || [];
+      // If empty, try issue picker approach
+      if (issues.length === 0) {
+        var resp3 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent('project+=' + key + '+ORDER+BY+updated+DESC') + '&maxResults=50&fields=summary,issuetype,status');
+        var data3 = await resp3.json();
+        console.log('Jira browse fallback:', data3);
+        issues = data3.issues || issues;
+      }
       if (!issues.length) { res.innerHTML = '<div class="jira-loading">No issues in this project</div>'; return; }
       res.innerHTML = issues.map(function(issue) {
         var summary = issue.fields ? issue.fields.summary : '';
@@ -2117,12 +2118,12 @@ function renderWeekly() {
 
 // ---- SETTINGS ----
 var GRADIENT_PRESETS = [
-  { light: 'linear-gradient(135deg,#7090d0 0%,#9060c8 35%,#b060a0 65%,#d07090 100%)', dark: 'linear-gradient(135deg,#030810 0%,#090318 50%,#03080e 100%)', colors: ['#7090d0','#9060c8','#d07090'] },
-  { light: 'linear-gradient(135deg,#50a888 0%,#6090c8 50%,#8060c0 100%)', dark: 'linear-gradient(135deg,#041a10 0%,#061525 50%,#0f0520 100%)', colors: ['#50a888','#6090c8','#8060c0'] },
-  { light: 'linear-gradient(135deg,#c87840 0%,#c05080 50%,#9050c0 100%)', dark: 'linear-gradient(135deg,#1a0e04 0%,#1a0610 50%,#100520 100%)', colors: ['#c87840','#c05080','#9050c0'] },
-  { light: 'linear-gradient(135deg,#50b870 0%,#40a0b0 50%,#5070c8 100%)', dark: 'linear-gradient(135deg,#041a08 0%,#041520 50%,#060f1a 100%)', colors: ['#50b870','#40a0b0','#5070c8'] },
-  { light: 'linear-gradient(135deg,#c07050 0%,#c09040 50%,#a0b040 100%)', dark: 'linear-gradient(135deg,#1a0804 0%,#1a0e04 50%,#140e00 100%)', colors: ['#c07050','#c09040','#a0b040'] },
-  { light: 'linear-gradient(135deg,#5080c0 0%,#4090a8 50%,#40a888 100%)', dark: 'linear-gradient(135deg,#040e1a 0%,#041518 50%,#041410 100%)', colors: ['#5080c0','#4090a8','#40a888'] },
+  { grad: 'linear-gradient(135deg,#08082a 0%,#100830 40%,#180c28 70%,#100820 100%)', swatch: 'linear-gradient(135deg,#08082a,#100830,#180c28,#100820)', label: 'Midnight indigo' },
+  { grad: 'linear-gradient(135deg,#050f0a 0%,#081a14 40%,#0a1a10 70%,#060e08 100%)', swatch: 'linear-gradient(135deg,#050f0a,#081a14,#0a1a10,#060e08)', label: 'Deep forest' },
+  { grad: 'linear-gradient(135deg,#1a0a2e 0%,#2e0a3a 35%,#3a1020 65%,#200818 100%)', swatch: 'linear-gradient(135deg,#1a0a2e,#2e0a3a,#3a1020,#200818)', label: 'Warm dusk' },
+  { grad: 'linear-gradient(135deg,#0a1628 0%,#0d2240 30%,#0a2e3a 60%,#0d1f2d 100%)', swatch: 'linear-gradient(135deg,#0a1628,#0d2240,#0a2e3a,#0d1f2d)', label: 'Deep ocean' },
+  { grad: 'linear-gradient(135deg,#180a04 0%,#241208 35%,#1c0e0c 65%,#120806 100%)', swatch: 'linear-gradient(135deg,#180a04,#241208,#1c0e0c,#120806)', label: 'Ember' },
+  { grad: 'linear-gradient(135deg,#0c1218 0%,#101820 40%,#0e1a16 70%,#0c1014 100%)', swatch: 'linear-gradient(135deg,#0c1218,#101820,#0e1a16,#0c1014)', label: 'Slate' }
 ];
 var activePreset = 0;
 
@@ -2137,10 +2138,14 @@ function applyGradientPreset(idx) {
   localStorage.setItem('ltt_gradient', p.grad);
   renderSettings();
 }function applyGradient(grad) {
+  document.body.style.background = grad;
+  document.body.style.backgroundAttachment = 'fixed';
   var styleEl = document.getElementById('grad-style');
   if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'grad-style'; document.head.appendChild(styleEl); }
   styleEl.textContent = ':root.dark{--grad:' + grad + '}';
-}function renderSettings() {
+}
+
+function renderSettings() {
   loadJiraCredentials();
   var currentGrad = localStorage.getItem('ltt_gradient') || GRADIENT_PRESETS[0].grad;
   var swatchHtml = GRADIENT_PRESETS.map(function(p, i) {
