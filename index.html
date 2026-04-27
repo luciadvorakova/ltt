@@ -1416,7 +1416,7 @@ async function jiraSearch(query) {
     // fallback to JQL search
     try {
       var jql2 = 'summary ~ "' + query.replace(/"/g, '\"') + '*" OR text ~ "' + query.replace(/"/g, '\"') + '" ORDER BY updated DESC';
-      var resp2 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent(jql2) + '&maxResults=20&fields=summary,project,issuetype,status');
+      var resp2 = await jiraFetch('/rest/api/3/search/jql?jql=' + encodeURIComponent(jql2) + '&maxResults=20&fields=summary,project,issuetype,status');
       var data2 = await resp2.json();
       renderJiraSearchResultsFull(data2.issues || []);
     } catch(e2) {
@@ -1482,13 +1482,13 @@ async function jiraBrowse(level, key, name) {
       // Try multiple JQL formats to handle different Jira configurations
       // Try with key first, then id, to handle different Jira configs
       var jql = 'project = ' + key + ' ORDER BY updated DESC';
-      var resp2 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent(jql) + '&maxResults=50&fields=summary,issuetype,status');
+      var resp2 = await jiraFetch('/rest/api/3/search/jql?jql=' + encodeURIComponent(jql) + '&maxResults=50&fields=summary,issuetype,status');
       var data2 = await resp2.json();
       console.log('Jira browse response:', data2);
       var issues = data2.issues || [];
       // If empty, try issue picker approach
       if (issues.length === 0) {
-        var resp3 = await jiraFetch('/rest/api/3/search?jql=' + encodeURIComponent('project+=' + key + '+ORDER+BY+updated+DESC') + '&maxResults=50&fields=summary,issuetype,status');
+        var resp3 = await jiraFetch('/rest/api/3/search/jql?jql=' + encodeURIComponent('project+=' + key + '+ORDER+BY+updated+DESC') + '&maxResults=50&fields=summary,issuetype,status');
         var data3 = await resp3.json();
         console.log('Jira browse fallback:', data3);
         issues = data3.issues || issues;
