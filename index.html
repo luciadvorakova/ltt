@@ -1955,27 +1955,46 @@ async function sendBulkToJira() {
 
     var mins = Math.ceil(entry.ms / 60000);
     if (mins < 1) mins = 1;
-    var trackDate = new Date(entry.ts);
+
+    // Read date from picker and desc from textarea in the modal
+    var dateInputEl = document.querySelector('.bulk-date-input[data-id="' + id + '"]');
+    var descInputEl = document.querySelector('.bulk-desc-input[data-id="' + id + '"]');
+    var selectedDateVal = dateInputEl ? dateInputEl.value : localDateValue(entry.ts);
+    var desc = descInputEl ? descInputEl.value.trim() : (entry.jiraDesc || '');
+
+    // Build date string with local timezone
+    var origDate = new Date(entry.ts);
+    var trackDate = selectedDateVal
+      ? new Date(selectedDateVal + 'T' + String(origDate.getHours()).padStart(2,'0') + ':' + String(origDate.getMinutes()).padStart(2,'0') + ':00')
+      : origDate;
     var tzOffset = -trackDate.getTimezoneOffset();
     var tzSign = tzOffset >= 0 ? '+' : '-';
     var tzHH = String(Math.floor(Math.abs(tzOffset)/60)).padStart(2,'0');
     var tzMM = String(Math.abs(tzOffset)%60).padStart(2,'0');
-    var dateStr = trackDate.getFullYear() + '-' + String(trackDate.getMonth()+1).padStart(2,'0') + '-' + String(trackDate.getDate()).padStart(2,'0') + 'T' + String(trackDate.getHours()).padStart(2,'0') + ':' + String(trackDate.getMinutes()).padStart(2,'0') + ':00.000' + tzSign + tzHH + tzMM;
+    var dateStr = trackDate.getFullYear() + '-' +
+      String(trackDate.getMonth()+1).padStart(2,'0') + '-' +
+      String(trackDate.getDate()).padStart(2,'0') + 'T' +
+      String(trackDate.getHours()).padStart(2,'0') + ':' +
+      String(trackDate.getMinutes()).padStart(2,'0') + ':00.000' +
+      tzSign + tzHH + tzMM;
 
     var body = { timeSpentSeconds: mins * 60, started: dateStr };
-    if (entry.jiraDesc) body.comment = { type:'doc', version:1, content:[{ type:'paragraph', content:[{ type:'text', text:entry.jiraDesc }] }] };
+    if (desc) body.comment = { type:'doc', version:1, content:[{ type:'paragraph', content:[{ type:'text', text:desc }] }] };
 
     try {
       var resp = await jiraFetch('/rest/api/3/issue/' + entry.jiraKey + '/worklog', {
-        method: 'POST',
-        body: JSON.stringify(body)
+        method: 'POST', body: JSON.stringify(body)
       });
       if (!resp.ok) throw new Error(await resp.text());
-      // Mark sent
-      var idx = entries.findIndex(function(e) { return e.id === id; });
-      if (idx > -1) { entries[idx].jiraSent = true; entries[idx].untracked = false; }
+      var idx2 = entries.findIndex(function(e) { return e.id === id; });
+      if (idx2 > -1) {
+        entries[idx2].jiraSent = true;
+        entries[idx2].untracked = false;
+        if (desc) entries[idx2].jiraDesc = desc;
+      }
       successCount++;
     } catch(e) {
+      console.error('Bulk send error for ' + entry.jiraKey + ':', e);
       errors.push(entry.jiraKey + ': ' + (e.message || 'failed'));
     }
   }
@@ -1990,6 +2009,7 @@ async function sendBulkToJira() {
     alert('Sent ' + successCount + ' worklogs. Failed: ' + errors.join(', '));
   }
 }
+
 
 function updateBulkJiraBtn() {
   var btn = document.getElementById('bulk-jira-btn');
