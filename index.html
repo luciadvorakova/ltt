@@ -142,6 +142,34 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .history-day-total { font-size: 13px; font-weight: 700; color: white; }
 .empty { text-align: center; color: rgba(255,255,255,0.42); font-size: 14px; padding: 2.5rem 0; }
 
+/* Date input liquid glass */
+input[type="date"] {
+  padding: 7px 12px; border-radius: 99px; font-size: 13px;
+  background: var(--input-bg); border: 1px solid var(--liq-border);
+  color: white; outline: none; box-shadow: var(--liq-shadow-sm);
+  font-family: inherit; cursor: pointer;
+  color-scheme: dark;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) brightness(1.5);
+  cursor: pointer;
+  opacity: 0.6;
+}
+input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
+
+/* Text selection enabled on entry names/descriptions */
+.entry-name, .entry-desc, .entry-info { user-select: text; -webkit-user-select: text; cursor: text; }
+.entry-name * { user-select: text; -webkit-user-select: text; }
+
+/* Bulk entry textarea */
+.bulk-desc-input {
+  width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px; color: white; font-size: 11px; font-family: inherit;
+  padding: 5px 8px; resize: none; outline: none; margin-top: 4px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.bulk-desc-input:focus { border-color: rgba(255,255,255,0.35); }
+
 /* Thin glass scrollbar — applied everywhere */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: rgba(255,255,255,0.06); border-radius: 99px; }
@@ -1632,6 +1660,12 @@ function confirmJiraIssue(key, summary) {
   renderToday();
 }
 
+// Helper: get YYYY-MM-DD in local time from timestamp
+function localDateValue(ts) {
+  var d = new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 // ---- SEND TO JIRA ----
 function showSendToJiraDialog(id) {
   closeFloatingMenu();
@@ -1656,7 +1690,7 @@ function showSendToJiraDialog(id) {
         '</div>' +
         '<div style="flex:1;">' +
           '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Date</label>' +
-          '<div style="padding:9px 14px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;">' + new Date(entry.ts).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) + '</div>' +
+          '<input type="date" id="jira-send-date" value="' + localDateValue(entry.ts) + '" style="width:100%;" />' +
         '</div>' +
       '</div>' +
       '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Description</label>' +
@@ -1742,12 +1776,20 @@ async function sendWorklogToJira(id) {
   var timeSpentSeconds = mins * 60;
 
   // Format date as ISO with time
-  var trackDate = new Date(entry.ts);
+  // Use selected date from picker, time from original entry
+  var dateInput = document.getElementById('jira-send-date');
+  var selectedDate = dateInput ? dateInput.value : null; // YYYY-MM-DD
+  var trackDate = selectedDate ? new Date(selectedDate + 'T' + String(new Date(entry.ts).getHours()).padStart(2,'0') + ':' + String(new Date(entry.ts).getMinutes()).padStart(2,'0') + ':00') : new Date(entry.ts);
+  var tzOffset = -trackDate.getTimezoneOffset();
+  var tzSign = tzOffset >= 0 ? '+' : '-';
+  var tzHours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2,'0');
+  var tzMins = String(Math.abs(tzOffset) % 60).padStart(2,'0');
   var dateStr = trackDate.getFullYear() + '-' +
     String(trackDate.getMonth()+1).padStart(2,'0') + '-' +
     String(trackDate.getDate()).padStart(2,'0') + 'T' +
     String(trackDate.getHours()).padStart(2,'0') + ':' +
-    String(trackDate.getMinutes()).padStart(2,'0') + ':00.000+0000';
+    String(trackDate.getMinutes()).padStart(2,'0') + ':00.000' +
+    tzSign + tzHours + tzMins;
 
   var body = {
     timeSpentSeconds: timeSpentSeconds,
@@ -1914,7 +1956,11 @@ async function sendBulkToJira() {
     var mins = Math.ceil(entry.ms / 60000);
     if (mins < 1) mins = 1;
     var trackDate = new Date(entry.ts);
-    var dateStr = trackDate.getFullYear() + '-' + String(trackDate.getMonth()+1).padStart(2,'0') + '-' + String(trackDate.getDate()).padStart(2,'0') + 'T' + String(trackDate.getHours()).padStart(2,'0') + ':' + String(trackDate.getMinutes()).padStart(2,'0') + ':00.000+0000';
+    var tzOffset = -trackDate.getTimezoneOffset();
+    var tzSign = tzOffset >= 0 ? '+' : '-';
+    var tzHH = String(Math.floor(Math.abs(tzOffset)/60)).padStart(2,'0');
+    var tzMM = String(Math.abs(tzOffset)%60).padStart(2,'0');
+    var dateStr = trackDate.getFullYear() + '-' + String(trackDate.getMonth()+1).padStart(2,'0') + '-' + String(trackDate.getDate()).padStart(2,'0') + 'T' + String(trackDate.getHours()).padStart(2,'0') + ':' + String(trackDate.getMinutes()).padStart(2,'0') + ':00.000' + tzSign + tzHH + tzMM;
 
     var body = { timeSpentSeconds: mins * 60, started: dateStr };
     if (entry.jiraDesc) body.comment = { type:'doc', version:1, content:[{ type:'paragraph', content:[{ type:'text', text:entry.jiraDesc }] }] };
@@ -1995,22 +2041,24 @@ function renderBulkList(data) {
 function bulkEntryHTML(e) {
   var checked = _bulkSelected[e.id];
   var mins = Math.ceil(e.ms / 60000);
-  var dateStr = new Date(e.ts).toLocaleDateString(undefined,{month:'short',day:'numeric'});
   var dark = isDarkMode();
-  return '<div class="bulk-entry-row' + (checked ? '' : ' deselected') + '" id="bulk-row-' + e.id + '" onclick="toggleBulkEntry(' + e.id + ')">' +
-    '<div class="bulk-checkbox' + (checked ? ' checked' : '') + '" id="bulk-chk-' + e.id + '">' +
-      (checked ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="' + (dark?'#0e041c':'#2a0a50') + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') +
+  var chkSvg = checked ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="' + (dark?'#0e041c':'#2a0a50') + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
+  return '<div class="bulk-entry-row' + (checked ? '' : ' deselected') + '" id="bulk-row-' + e.id + '" style="flex-direction:column;align-items:stretch;gap:8px;">' +
+    // Top row: checkbox + key + name + time
+    '<div style="display:flex;align-items:center;gap:10px;" onclick="toggleBulkEntry(' + e.id + ')" style="cursor:pointer;">' +
+      '<div class="bulk-checkbox' + (checked ? ' checked' : '') + '" id="bulk-chk-' + e.id + '" style="flex-shrink:0;">' + chkSvg + '</div>' +
+      '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:99px;padding:1px 7px;flex-shrink:0;">' + esc(e.jiraKey) + '</span>' +
+      '<span style="font-size:13px;font-weight:600;color:white;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(e.jiraSummary || e.name) + '</span>' +
+      '<span style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);flex-shrink:0;">' + mins + 'm</span>' +
     '</div>' +
-    '<div style="flex:1;min-width:0;">' +
-      '<div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">' +
-        '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:99px;padding:1px 7px;flex-shrink:0;">' + esc(e.jiraKey) + '</span>' +
-        '<span style="font-size:13px;font-weight:600;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(e.jiraSummary || e.name) + '</span>' +
-      '</div>' +
-      (e.jiraDesc ? '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">' + esc(e.jiraDesc) + '</div>' : '') +
+    // Date picker row
+    '<div style="display:flex;align-items:center;gap:8px;padding-left:28px;" onclick="event.stopPropagation()">' +
+      '<label style="font-size:11px;color:rgba(255,255,255,0.45);flex-shrink:0;">Date</label>' +
+      '<input type="date" class="bulk-date-input" data-id="' + e.id + '" value="' + localDateValue(e.ts) + '" style="font-size:12px;padding:4px 10px;" onclick="event.stopPropagation()" />' +
     '</div>' +
-    '<div style="text-align:right;flex-shrink:0;margin-left:8px;">' +
-      '<div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);">' + mins + 'm</div>' +
-      '<div style="font-size:10px;color:rgba(255,255,255,0.45);">' + dateStr + '</div>' +
+    // Description row
+    '<div style="padding-left:28px;" onclick="event.stopPropagation()">' +
+      '<textarea class="bulk-desc-input" data-id="' + e.id + '" rows="2" placeholder="Description (optional)...">' + esc(e.jiraDesc || '') + '</textarea>' +
     '</div>' +
   '</div>';
 }
@@ -2021,7 +2069,16 @@ function toggleBulkEntry(id) {
   var chk = document.getElementById('bulk-chk-' + id);
   var dark = isDarkMode();
   if (row) row.classList.toggle('deselected', !_bulkSelected[id]);
-  if (chk) { chk.classList.toggle('checked', !!_bulkSelected[id]); chk.innerHTML = _bulkSelected[id] ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="' + (dark?'#0e041c':'#2a0a50') + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''; }
+  if (chk) {
+    chk.classList.toggle('checked', !!_bulkSelected[id]);
+    chk.innerHTML = _bulkSelected[id] ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="' + (dark?'#0e041c':'#2a0a50') + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
+  }
+  // Grey out date/desc inputs when deselected
+  var dateEl = document.querySelector('.bulk-date-input[data-id="' + id + '"]');
+  var descEl = document.querySelector('.bulk-desc-input[data-id="' + id + '"]');
+  var opacity = _bulkSelected[id] ? '1' : '0.35';
+  if (dateEl) dateEl.style.opacity = opacity;
+  if (descEl) descEl.style.opacity = opacity;
   updateBulkCount();
 }
 
@@ -2050,10 +2107,20 @@ async function sendBulkToJira() {
     var entry = entries.find(function(e) { return e.id === id; });
     if (!entry) continue;
     var mins = Math.ceil(entry.ms / 60000); if (mins < 1) mins = 1;
-    var trackDate = new Date(entry.ts);
-    var dateStr = trackDate.getFullYear() + '-' + String(trackDate.getMonth()+1).padStart(2,'0') + '-' + String(trackDate.getDate()).padStart(2,'0') + 'T' + String(trackDate.getHours()).padStart(2,'0') + ':' + String(trackDate.getMinutes()).padStart(2,'0') + ':00.000+0000';
+    // Read date from picker and desc from textarea
+    var dateInputEl = document.querySelector('.bulk-date-input[data-id="' + id + '"]');
+    var descInputEl = document.querySelector('.bulk-desc-input[data-id="' + id + '"]');
+    var selectedDateVal = dateInputEl ? dateInputEl.value : localDateValue(entry.ts);
+    var desc = descInputEl ? descInputEl.value.trim() : (entry.jiraDesc || '');
+    var origDate = new Date(entry.ts);
+    var trackDate = selectedDateVal ? new Date(selectedDateVal + 'T' + String(origDate.getHours()).padStart(2,'0') + ':' + String(origDate.getMinutes()).padStart(2,'0') + ':00') : origDate;
+    var tzOffset = -trackDate.getTimezoneOffset();
+    var tzSign = tzOffset >= 0 ? '+' : '-';
+    var tzHH = String(Math.floor(Math.abs(tzOffset)/60)).padStart(2,'0');
+    var tzMM = String(Math.abs(tzOffset)%60).padStart(2,'0');
+    var dateStr = trackDate.getFullYear() + '-' + String(trackDate.getMonth()+1).padStart(2,'0') + '-' + String(trackDate.getDate()).padStart(2,'0') + 'T' + String(trackDate.getHours()).padStart(2,'0') + ':' + String(trackDate.getMinutes()).padStart(2,'0') + ':00.000' + tzSign + tzHH + tzMM;
     var body = { timeSpentSeconds: mins * 60, started: dateStr };
-    if (entry.jiraDesc) body.comment = { type:'doc', version:1, content:[{ type:'paragraph', content:[{ type:'text', text:entry.jiraDesc }] }] };
+    if (desc) body.comment = { type:'doc', version:1, content:[{ type:'paragraph', content:[{ type:'text', text:desc }] }] };
     try {
       var resp = await jiraFetch('/rest/api/3/issue/' + entry.jiraKey + '/worklog', { method:'POST', body:JSON.stringify(body) });
       if (!resp.ok) throw new Error(await resp.text());
