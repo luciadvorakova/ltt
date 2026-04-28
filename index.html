@@ -2141,6 +2141,40 @@ renderToday();
   <div class="bg-orb" style="width:200px;height:200px;background:radial-gradient(circle,rgba(100,60,220,0.2),transparent 70%);bottom:25%;right:5%;"></div>
 </div>
 <div id="grain-overlay"></div>
+<!-- Bulk Jira Upload Modal -->
+<div id="bulk-jira-modal" style="display:none;position:fixed;inset:0;z-index:99997;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);">
+  <div id="bulk-jira-panel" style="width:90%;max-width:500px;max-height:82vh;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+    <div style="padding:20px 20px 0;overflow-y:auto;flex:1;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-size:16px;font-weight:700;color:white;">Send to Jira</div>
+        <button onclick="closeBulkModal()" class="btn" style="padding:5px 14px;font-size:12px;">Close</button>
+      </div>
+      <div id="bulk-jira-list" style="display:flex;flex-direction:column;gap:10px;padding-bottom:8px;"></div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <span id="bulk-selected-count" style="font-size:12px;color:rgba(255,255,255,0.55);"></span>
+      <button onclick="sendBulkToJira()" id="bulk-send-btn" class="btn primary" style="padding:9px 22px;">Send selected to Jira</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Jira Upload Modal -->
+<div id="bulk-jira-modal" style="display:none;position:fixed;inset:0;z-index:99997;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);">
+  <div id="bulk-jira-panel" style="width:90%;max-width:500px;max-height:82vh;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+    <div style="padding:20px 20px 0;overflow-y:auto;flex:1;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-size:16px;font-weight:700;color:white;">Send to Jira</div>
+        <button onclick="closeBulkModal()" class="btn" style="padding:5px 14px;font-size:12px;">Close</button>
+      </div>
+      <div id="bulk-jira-list" style="display:flex;flex-direction:column;gap:10px;padding-bottom:8px;"></div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <span id="bulk-selected-count" style="font-size:12px;color:rgba(255,255,255,0.55);"></span>
+      <button onclick="sendBulkToJira()" id="bulk-send-btn" class="btn primary" style="padding:9px 22px;">Send selected to Jira</button>
+    </div>
+  </div>
+</div>
+
 <div id="floating-menu" style="display:none;position:fixed;z-index:99999;min-width:188px;border-radius:14px;overflow:hidden;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);"></div>
 </body>
 </html>
