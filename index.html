@@ -1611,29 +1611,20 @@ function showJiraDescriptionDialog(key, summary) {
   overlay.id = 'jira-desc-overlay';
   overlay.dataset.key = key;
   overlay.dataset.summary = summary;
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);';
-  var dark = isDarkMode();
-  var panelBg = dark ? 'rgba(20,10,40,0.85)' : 'rgba(220,210,250,0.75)';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);';
   overlay.innerHTML =
-    '<div style="background:' + panelBg + ';backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,' + (dark?'0.18':'0.5') + ');border-top-color:rgba(255,255,255,' + (dark?'0.3':'0.8') + ');border-radius:20px;padding:24px;width:90%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,0.3);">' +
-      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">' + esc(key) + '</div>' +
-      '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:16px;line-height:1.4;">' + esc(summary) + '</div>' +
-      '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Description <span style="opacity:0.6;">(optional — shown in Jira worklog)</span></label>' +
-      '<textarea id="jira-desc-input" placeholder="What did you work on?" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;resize:vertical;font-family:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);"></textarea>' +
+    '<div style="background:rgba(18,10,40,0.92);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.28);border-radius:24px;padding:22px;width:90%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,0.6);">' +
+      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">' + esc(key) + '</div>' +
+      '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:18px;line-height:1.4;">' + esc(summary) + '</div>' +
+      '<label style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;display:block;margin-bottom:6px;">Description <span style="opacity:0.5;font-weight:400;">(shown in Jira worklog)</span></label>' +
+      '<input type="text" id="jira-desc-input" placeholder="What will you work on?" style="width:100%;padding:9px 14px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);color:white;outline:none;font-family:inherit;box-sizing:border-box;" />' +
       '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">' +
-        '<button onclick="closeJiraDescDialog()" style="padding:9px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Cancel</button>' +
-        '<button onclick="confirmJiraIssueFromDialog()" style="padding:9px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);">Add</button>' +
+        '<button onclick="closeJiraDescDialog()" class="btn" style="padding:9px 18px;font-size:13px;">Cancel</button>' +
+        '<button onclick="confirmJiraIssueFromDialog()" class="btn primary" style="padding:9px 22px;font-size:13px;">Add</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(overlay);
   setTimeout(function() { var t = document.getElementById('jira-desc-input'); if(t) t.focus(); }, 50);
-}
-
-function confirmJiraIssueFromDialog() {
-  var overlay = document.getElementById('jira-desc-overlay');
-  var key = overlay ? overlay.dataset.key : '';
-  var summary = overlay ? overlay.dataset.summary : '';
-  confirmJiraIssue(key, summary);
 }
 
 function closeJiraDescDialog() {
@@ -1674,31 +1665,29 @@ function showSendToJiraDialog(id) {
   if (!entry) return;
   var mins = Math.ceil(entry.ms / 60000);
   if (mins < 1) mins = 1;
-  var dark = isDarkMode();
-  var panelBg = dark ? 'rgba(20,10,40,0.85)' : 'rgba(220,210,250,0.75)';
   var overlay = document.createElement('div');
   overlay.id = 'jira-send-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);';
   overlay.innerHTML =
-    '<div style="background:' + panelBg + ';backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,' + (dark?'0.18':'0.5') + ');border-top-color:rgba(255,255,255,' + (dark?'0.3':'0.8') + ');border-radius:20px;padding:24px;width:90%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,0.3);">' +
-      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">' + esc(entry.jiraKey) + '</div>' +
-      '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:16px;line-height:1.4;">' + esc(entry.jiraSummary || entry.name) + '</div>' +
-      '<div style="display:flex;gap:12px;margin-bottom:14px;">' +
+    '<div style="background:rgba(18,10,40,0.92);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.28);border-radius:24px;padding:22px;width:90%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,0.6);">' +
+      '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">' + esc(entry.jiraKey) + '</div>' +
+      '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:18px;line-height:1.4;">' + esc(entry.jiraSummary || entry.name) + '</div>' +
+      '<div style="display:flex;gap:10px;margin-bottom:14px;">' +
         '<div style="flex:1;">' +
-          '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Time spent</label>' +
-          '<div style="padding:9px 14px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:white;">' + mins + ' min</div>' +
+          '<label style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;display:block;margin-bottom:6px;">Time spent</label>' +
+          '<div style="padding:8px 14px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.7);">' + mins + ' min</div>' +
         '</div>' +
         '<div style="flex:1;">' +
-          '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Date</label>' +
-          '<input type="date" id="jira-send-date" value="' + localDateValue(entry.ts) + '" style="width:100%;" />' +
+          '<label style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;display:block;margin-bottom:6px;">Date</label>' +
+          '<input type="date" id="jira-send-date" value="' + localDateValue(entry.ts) + '" style="width:100%;padding:8px 12px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);color:white;outline:none;color-scheme:dark;font-family:inherit;" />' +
         '</div>' +
       '</div>' +
-      '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Description</label>' +
-      '<textarea id="jira-send-desc" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;resize:vertical;font-family:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,0.2);">' + esc(entry.jiraDesc || '') + '</textarea>' +
-      '<div id="jira-send-status" style="font-size:12px;color:rgba(255,255,255,0.55);margin-top:8px;min-height:18px;"></div>' +
-      '<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">' +
-        '<button onclick="closeSendDialog()" style="padding:9px 18px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.6);background:none;border:1px solid rgba(255,255,255,0.2);">Cancel</button>' +
-        '<button id="jira-send-btn" onclick="sendWorklogToJira(' + id + ')" style="padding:9px 22px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;color:#2a0a50;background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.95);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);">Send to Jira</button>' +
+      '<label style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;display:block;margin-bottom:6px;">Description <span style="color:rgba(255,120,120,0.7);">*</span></label>' +
+      '<input type="text" id="jira-send-desc" placeholder="What did you work on?" value="' + esc(entry.jiraDesc || '') + '" style="width:100%;padding:9px 14px;border-radius:99px;font-size:13px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);color:white;outline:none;font-family:inherit;box-sizing:border-box;" />' +
+      '<div id="jira-send-status" style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:8px;min-height:18px;"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;">' +
+        '<button onclick="closeSendDialog()" class="btn" style="padding:9px 18px;font-size:13px;">Cancel</button>' +
+        '<button id="jira-send-btn" onclick="sendWorklogToJira(' + id + ')" class="btn primary" style="padding:9px 22px;font-size:13px;">Send to Jira</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(overlay);
@@ -1829,6 +1818,8 @@ async function sendWorklogToJira(id) {
 
 // ---- BULK JIRA UPLOAD ----
 var _bulkSelected = {};
+var _bulkDescCache = {};
+var _bulkDateCache = {};
 
 
 
@@ -1842,6 +1833,8 @@ var _bulkSelected = {};
 
 // ---- BULK JIRA UPLOAD ----
 var _bulkSelected = {};
+var _bulkDescCache = {};
+var _bulkDateCache = {};
 
 function getBulkEntries() {
   var entries = loadEntries();
@@ -1859,13 +1852,16 @@ function showBulkJiraModal() {
   var all = data.today.concat(data.older);
   if (!all.length) { alert('No unsent Jira entries found.'); return; }
   _bulkSelected = {};
+  _bulkDescCache = {};
+  _bulkDateCache = {};
   all.forEach(function(e) { _bulkSelected[e.id] = true; });
   var dark = isDarkMode();
   var panel = document.getElementById('bulk-jira-panel');
-  panel.style.background = dark ? 'rgba(15,8,35,0.88)' : 'rgba(200,185,240,0.82)';
-  panel.style.border = '1px solid rgba(255,255,255,' + (dark?'0.14':'0.45') + ')';
+  panel.style.background = 'rgba(18,10,40,0.92)';
+  panel.style.border = '1px solid rgba(255,255,255,0.14)'; panel.style.borderTop = '1px solid rgba(255,255,255,0.28)';
   panel.style.backdropFilter = 'blur(32px)';
   panel.style.webkitBackdropFilter = 'blur(32px)';
+  panel.style.borderRadius = '24px';
   renderBulkList(data);
   document.getElementById('bulk-jira-modal').style.display = 'flex';
 }
@@ -1883,50 +1879,61 @@ function bulkEntryHTML(e) {
   var checked = _bulkSelected[e.id];
   var mins = Math.ceil(e.ms / 60000);
   var dark = isDarkMode();
-  var chkSvg = checked ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="' + (dark?'#0e041c':'#2a0a50') + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
-  return '<div class="bulk-entry-row' + (checked ? '' : ' deselected') + '" id="bulk-row-' + e.id + '" style="flex-direction:column;align-items:stretch;gap:8px;">' +
-    // Top row: checkbox + key + name + time
-    '<div style="display:flex;align-items:center;gap:10px;" onclick="toggleBulkEntry(' + e.id + ')" style="cursor:pointer;">' +
+  var chkSvg = checked ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="#2a0a50" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
+  var deselStyle = checked ? '' : 'opacity:0.4;';
+  return '<div class="bulk-entry-row" id="bulk-row-' + e.id + '" style="flex-direction:column;align-items:stretch;gap:9px;' + deselStyle + '">' +
+    '<div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="toggleBulkEntry(' + e.id + ')">' +
       '<div class="bulk-checkbox' + (checked ? ' checked' : '') + '" id="bulk-chk-' + e.id + '" style="flex-shrink:0;">' + chkSvg + '</div>' +
-      '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:99px;padding:1px 7px;flex-shrink:0;">' + esc(e.jiraKey) + '</span>' +
-      '<span style="font-size:13px;font-weight:600;color:white;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(e.jiraSummary || e.name) + '</span>' +
+      '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:99px;padding:1px 8px;flex-shrink:0;">' + esc(e.jiraKey) + '</span>' +
+      '<span style="font-size:13px;font-weight:500;color:white;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(e.jiraSummary || e.name) + '</span>' +
       '<span style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);flex-shrink:0;">' + mins + 'm</span>' +
     '</div>' +
-    // Date picker row
-    '<div style="display:flex;align-items:center;gap:8px;padding-left:28px;" onclick="event.stopPropagation()">' +
-      '<label style="font-size:11px;color:rgba(255,255,255,0.45);flex-shrink:0;">Date</label>' +
-      '<input type="date" class="bulk-date-input" data-id="' + e.id + '" value="' + localDateValue(e.ts) + '" style="font-size:12px;padding:4px 10px;" onclick="event.stopPropagation()" />' +
-    '</div>' +
-    // Description row
-    '<div style="padding-left:28px;" onclick="event.stopPropagation()">' +
-      '<textarea class="bulk-desc-input" data-id="' + e.id + '" rows="2" placeholder="Description (optional)...">' + esc(e.jiraDesc || '') + '</textarea>' +
-    '</div>' +
+    (checked ?
+      '<div style="display:flex;align-items:center;gap:8px;padding-left:28px;" onclick="event.stopPropagation()">' +
+        '<label style="font-size:11px;color:rgba(255,255,255,0.4);flex-shrink:0;width:32px;">Date</label>' +
+        '<input type="date" class="bulk-date-input" data-id="' + e.id + '" value="' + localDateValue(e.ts) + '" onclick="event.stopPropagation()" style="font-size:12px;padding:4px 10px;width:150px;flex-shrink:0;" />' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;padding-left:28px;" onclick="event.stopPropagation()">' +
+        '<label style="font-size:11px;color:rgba(255,255,255,0.4);flex-shrink:0;width:32px;">Desc</label>' +
+        '<input type="text" class="bulk-desc-input" data-id="' + e.id + '" value="' + esc(e.jiraDesc || '') + '" placeholder="Required..." onclick="event.stopPropagation()" style="flex:1;font-size:12px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:white;outline:none;font-family:inherit;" />' +
+      '</div>'
+    : '') +
   '</div>';
 }
 
+
 function toggleBulkEntry(id) {
-  _bulkSelected[id] = !_bulkSelected[id];
-  var row = document.getElementById('bulk-row-' + id);
-  var chk = document.getElementById('bulk-chk-' + id);
-  var dark = isDarkMode();
-  if (row) row.classList.toggle('deselected', !_bulkSelected[id]);
-  if (chk) {
-    chk.classList.toggle('checked', !!_bulkSelected[id]);
-    chk.innerHTML = _bulkSelected[id] ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="' + (dark?'#0e041c':'#2a0a50') + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '';
-  }
-  // Grey out date/desc inputs when deselected
-  var dateEl = document.querySelector('.bulk-date-input[data-id="' + id + '"]');
+  // Save current desc value before re-render
   var descEl = document.querySelector('.bulk-desc-input[data-id="' + id + '"]');
-  var opacity = _bulkSelected[id] ? '1' : '0.35';
-  if (dateEl) dateEl.style.opacity = opacity;
-  if (descEl) descEl.style.opacity = opacity;
+  var dateEl = document.querySelector('.bulk-date-input[data-id="' + id + '"]');
+  if (descEl) _bulkDescCache[id] = descEl.value;
+  if (dateEl) _bulkDateCache[id] = dateEl.value;
+  _bulkSelected[id] = !_bulkSelected[id];
+  // Re-render just this row
+  var row = document.getElementById('bulk-row-' + id);
+  var entries = loadEntries();
+  var entry = entries.find(function(e) { return e.id === Number(id); });
+  if (row && entry) {
+    // Temporarily restore cached desc for display
+    if (_bulkDescCache[id] !== undefined) entry.jiraDesc = _bulkDescCache[id];
+    row.outerHTML = bulkEntryHTML(entry);
+  }
   updateBulkCount();
 }
 
 function updateBulkCount() {
-  var count = Object.values(_bulkSelected).filter(Boolean).length;
+  var entries = loadEntries();
+  var count = 0;
+  var totalMs = 0;
+  Object.keys(_bulkSelected).forEach(function(id) {
+    if (_bulkSelected[id]) {
+      count++;
+      var entry = entries.find(function(e) { return e.id === Number(id); });
+      if (entry) totalMs += entry.ms || 0;
+    }
+  });
   var el = document.getElementById('bulk-selected-count');
-  if (el) el.textContent = count + ' entr' + (count === 1 ? 'y' : 'ies') + ' selected';
+  if (el) el.innerHTML = count + ' entr' + (count === 1 ? 'y' : 'ies') + ' &middot; <span style="color:rgba(160,255,180,0.85);font-weight:600;">' + fmtShort(totalMs) + '</span>';
   var btn = document.getElementById('bulk-send-btn');
   if (btn) btn.disabled = count === 0;
 }
@@ -2142,35 +2149,39 @@ renderToday();
 </div>
 <div id="grain-overlay"></div>
 <!-- Bulk Jira Upload Modal -->
-<div id="bulk-jira-modal" style="display:none;position:fixed;inset:0;z-index:99997;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);">
-  <div id="bulk-jira-panel" style="width:90%;max-width:500px;max-height:82vh;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
-    <div style="padding:20px 20px 0;overflow-y:auto;flex:1;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div style="font-size:16px;font-weight:700;color:white;">Send to Jira</div>
-        <button onclick="closeBulkModal()" class="btn" style="padding:5px 14px;font-size:12px;">Close</button>
+<div id="bulk-jira-modal" style="display:none;position:fixed;inset:0;z-index:99997;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);">
+  <div id="bulk-jira-panel" style="width:92%;max-width:500px;max-height:84vh;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,0.6);">
+    <div style="padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:white;">Send to Jira</div>
+        <div id="bulk-selected-count" style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;"></div>
       </div>
-      <div id="bulk-jira-list" style="display:flex;flex-direction:column;gap:10px;padding-bottom:8px;"></div>
+      <button onclick="closeBulkModal()" class="btn" style="padding:5px 14px;font-size:12px;">Close</button>
     </div>
-    <div style="padding:14px 20px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-      <span id="bulk-selected-count" style="font-size:12px;color:rgba(255,255,255,0.55);"></span>
-      <button onclick="sendBulkToJira()" id="bulk-send-btn" class="btn primary" style="padding:9px 22px;">Send selected to Jira</button>
+    <div style="overflow-y:auto;flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.18) transparent;">
+      <div id="bulk-jira-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:flex-end;flex-shrink:0;">
+      <button onclick="sendBulkToJira()" id="bulk-send-btn" class="btn primary" style="padding:9px 22px;">Send to Jira</button>
     </div>
   </div>
 </div>
 
 <!-- Bulk Jira Upload Modal -->
-<div id="bulk-jira-modal" style="display:none;position:fixed;inset:0;z-index:99997;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);">
-  <div id="bulk-jira-panel" style="width:90%;max-width:500px;max-height:82vh;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
-    <div style="padding:20px 20px 0;overflow-y:auto;flex:1;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div style="font-size:16px;font-weight:700;color:white;">Send to Jira</div>
-        <button onclick="closeBulkModal()" class="btn" style="padding:5px 14px;font-size:12px;">Close</button>
+<div id="bulk-jira-modal" style="display:none;position:fixed;inset:0;z-index:99997;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);">
+  <div id="bulk-jira-panel" style="width:92%;max-width:500px;max-height:84vh;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,0.6);">
+    <div style="padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:white;">Send to Jira</div>
+        <div id="bulk-selected-count" style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:2px;"></div>
       </div>
-      <div id="bulk-jira-list" style="display:flex;flex-direction:column;gap:10px;padding-bottom:8px;"></div>
+      <button onclick="closeBulkModal()" class="btn" style="padding:5px 14px;font-size:12px;">Close</button>
     </div>
-    <div style="padding:14px 20px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-      <span id="bulk-selected-count" style="font-size:12px;color:rgba(255,255,255,0.55);"></span>
-      <button onclick="sendBulkToJira()" id="bulk-send-btn" class="btn primary" style="padding:9px 22px;">Send selected to Jira</button>
+    <div style="overflow-y:auto;flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.18) transparent;">
+      <div id="bulk-jira-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:flex-end;flex-shrink:0;">
+      <button onclick="sendBulkToJira()" id="bulk-send-btn" class="btn primary" style="padding:9px 22px;">Send to Jira</button>
     </div>
   </div>
 </div>
