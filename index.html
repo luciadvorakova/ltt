@@ -8,7 +8,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --grad: linear-gradient(135deg, #08082a 0%, #100830 40%, #180c28 70%, #100820 100%);
+  --grad: linear-gradient(135deg, #0a1628 0%, #0d2240 30%, #0a2e3a 60%, #0d1f2d 100%);
   --text: rgba(255,255,255,1); --text2: rgba(255,255,255,0.68);
   --danger: rgba(255,180,180,0.95); --danger-bg: rgba(255,80,80,0.14);
   --radius: 16px; --radius-lg: 24px; --radius-sm: 99px;
@@ -23,7 +23,7 @@
   --input-bg: rgba(255,255,255,0.1);
 }
 :root.dark {
-  --grad: linear-gradient(135deg, #08082a 0%, #100830 40%, #180c28 70%, #100820 100%);
+  --grad: linear-gradient(135deg, #0a1628 0%, #0d2240 30%, #0a2e3a 60%, #0d1f2d 100%);
   --text: rgba(255,255,255,1); --text2: rgba(255,255,255,0.62);
   --danger: rgba(255,160,160,0.9); --danger-bg: rgba(255,80,80,0.1);
   --radius: 16px; --radius-lg: 24px; --radius-sm: 99px;
@@ -2092,10 +2092,10 @@ function renderWeekly() {
 
 // ---- SETTINGS ----
 var GRADIENT_PRESETS = [
+  { grad: 'linear-gradient(135deg,#0a1628 0%,#0d2240 30%,#0a2e3a 60%,#0d1f2d 100%)', swatch: 'linear-gradient(135deg,#0a1628,#0d2240,#0a2e3a,#0d1f2d)', label: 'Deep ocean' },
   { grad: 'linear-gradient(135deg,#08082a 0%,#100830 40%,#180c28 70%,#100820 100%)', swatch: 'linear-gradient(135deg,#08082a,#100830,#180c28,#100820)', label: 'Midnight indigo' },
   { grad: 'linear-gradient(135deg,#050f0a 0%,#081a14 40%,#0a1a10 70%,#060e08 100%)', swatch: 'linear-gradient(135deg,#050f0a,#081a14,#0a1a10,#060e08)', label: 'Deep forest' },
   { grad: 'linear-gradient(135deg,#1a0a2e 0%,#2e0a3a 35%,#3a1020 65%,#200818 100%)', swatch: 'linear-gradient(135deg,#1a0a2e,#2e0a3a,#3a1020,#200818)', label: 'Warm dusk' },
-  { grad: 'linear-gradient(135deg,#0a1628 0%,#0d2240 30%,#0a2e3a 60%,#0d1f2d 100%)', swatch: 'linear-gradient(135deg,#0a1628,#0d2240,#0a2e3a,#0d1f2d)', label: 'Deep ocean' },
   { grad: 'linear-gradient(135deg,#180a04 0%,#241208 35%,#1c0e0c 65%,#120806 100%)', swatch: 'linear-gradient(135deg,#180a04,#241208,#1c0e0c,#120806)', label: 'Ember' },
   { grad: 'linear-gradient(135deg,#0c1218 0%,#101820 40%,#0e1a16 70%,#0c1014 100%)', swatch: 'linear-gradient(135deg,#0c1218,#101820,#0e1a16,#0c1014)', label: 'Slate' }
 ];
@@ -2103,20 +2103,31 @@ var activePreset = 0;
 
 function loadGradientSetting() {
   var saved = localStorage.getItem('ltt_gradient');
-  applyGradient(saved || GRADIENT_PRESETS[0].grad);
-}function applyPreset(i) { applyGradientPreset(i); }
+  // Validate saved grad still exists in presets, otherwise use default
+  var grad = saved || GRADIENT_PRESETS[0].grad;
+  applyGradient(grad);
+}function applyPreset(i) { applyGradientPreset(i); }function applyGradient(grad) {
+  document.body.style.background = grad;
+  document.body.style.backgroundAttachment = 'fixed';
+  var styleEl = document.getElementById('grad-style');
+  if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'grad-style'; document.head.appendChild(styleEl); }
+  styleEl.textContent = ':root.dark{--grad:' + grad + '}';
+}
+
 function applyGradientPreset(idx) {
   var p = GRADIENT_PRESETS[idx];
   if (!p) return;
   applyGradient(p.grad);
   localStorage.setItem('ltt_gradient', p.grad);
   renderSettings();
-}function applyGradient(grad) {
-  document.body.style.background = grad;
-  document.body.style.backgroundAttachment = 'fixed';
-  var styleEl = document.getElementById('grad-style');
-  if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'grad-style'; document.head.appendChild(styleEl); }
-  styleEl.textContent = ':root.dark{--grad:' + grad + '}';
+}
+
+function applyGradientPreset(idx) {
+  var p = GRADIENT_PRESETS[idx];
+  if (!p) return;
+  applyGradient(p.grad);
+  localStorage.setItem('ltt_gradient', p.grad);
+  renderSettings();
 }
 
 function renderSettings() {
