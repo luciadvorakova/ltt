@@ -45,8 +45,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 #grain-overlay { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.08; background-repeat: repeat; background-size: 128px 128px; }
 
 /* Orbs behind main panel */
-.glass-app { position: relative; overflow: hidden; border-radius: var(--radius-lg); padding: 1.5rem 1.5rem 2rem; background: var(--liq-bg); border: 1px solid var(--liq-border); box-shadow: var(--liq-shadow); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); }
-.glass-app::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 80px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 40%, transparent 100%); pointer-events: none; z-index: 0; }
+.glass-app { position: relative; border-radius: var(--radius-lg); padding: 1.5rem 1.5rem 2rem; background: var(--liq-bg); border: 1px solid var(--liq-border); box-shadow: var(--liq-shadow); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); }
+.glass-app::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 80px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 40%, transparent 100%); pointer-events: none; z-index: 0; overflow: hidden; }
 .glass-app::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), rgba(255,255,255,0.8), rgba(255,255,255,0.6), transparent); border-radius: var(--radius-lg) var(--radius-lg) 0 0; pointer-events: none; z-index: 1; }
 .glass-app > * { position: relative; z-index: 2; }
 .glass-header-divider { height: 1px; background: rgba(255,255,255,0.15); margin: 0 0 1.25rem; }
@@ -196,7 +196,8 @@ input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
 .jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: var(--input-bg); border: 1px solid var(--liq-border); color: white; outline: none; box-shadow: var(--liq-shadow-sm); }
 .jira-search-row input::placeholder { color: rgba(255,255,255,0.4); }
 .jira-results-wrap { position: relative; }
-.jira-results { position: absolute; top: 4px; left: 0; right: 0; z-index: 999; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; background: rgba(10,16,36,0.55); backdrop-filter: blur(40px) saturate(180%) brightness(0.7); -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(0.7); border: 1px solid rgba(255,255,255,0.18); border-top-color: rgba(255,255,255,0.32); border-radius: 14px; padding: 6px; box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18); }
+.jira-results { position: absolute; top: 4px; left: 0; right: 0; z-index: 999; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border: 1px solid rgba(255,255,255,0.18); border-top-color: rgba(255,255,255,0.32); border-radius: 14px; padding: 6px; box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18); background: rgba(8,14,32,0.82); isolation: isolate; }
+.jira-results::before { content: ''; position: absolute; inset: 0; border-radius: 14px; backdrop-filter: blur(40px) saturate(160%) brightness(0.65); -webkit-backdrop-filter: blur(40px) saturate(160%) brightness(0.65); z-index: -1; pointer-events: none; }
 .jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: var(--liq-bg); border: 1px solid var(--liq-border); border-top-color: var(--glass-border-top, rgba(255,255,255,0.45)); box-shadow: var(--liq-shadow-sm); transition: background 0.1s; }
 .jira-result-item:hover { background: rgba(255,255,255,0.2); }
 .jira-result-key { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); white-space: nowrap; min-width: 56px; }
