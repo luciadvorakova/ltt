@@ -195,7 +195,8 @@ input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
 .jira-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
 .jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: var(--input-bg); border: 1px solid var(--liq-border); color: white; outline: none; box-shadow: var(--liq-shadow-sm); }
 .jira-search-row input::placeholder { color: rgba(255,255,255,0.4); }
-.jira-results { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.jira-results-wrap { position: relative; }
+.jira-results { position: absolute; top: 4px; left: 0; right: 0; z-index: 999; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; background: rgba(255,255,255,0.07); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 6px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
 .jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: var(--liq-bg); border: 1px solid var(--liq-border); border-top-color: var(--glass-border-top, rgba(255,255,255,0.45)); box-shadow: var(--liq-shadow-sm); transition: background 0.1s; }
 .jira-result-item:hover { background: rgba(255,255,255,0.2); }
 .jira-result-key { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); white-space: nowrap; min-width: 56px; }
@@ -221,7 +222,8 @@ input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
 .jira-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
 .jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: var(--input-bg); border: 1px solid var(--liq-border); color: white; outline: none; box-shadow: var(--liq-shadow-sm); }
 .jira-search-row input::placeholder { color: rgba(255,255,255,0.4); }
-.jira-results { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.jira-results-wrap { position: relative; }
+.jira-results { position: absolute; top: 4px; left: 0; right: 0; z-index: 999; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; background: rgba(255,255,255,0.07); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 6px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
 .jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: var(--liq-bg); border: 1px solid var(--liq-border); border-top-color: var(--glass-border-top, rgba(255,255,255,0.45)); box-shadow: var(--liq-shadow-sm); transition: background 0.1s; }
 .jira-result-item:hover { background: rgba(255,255,255,0.2); }
 .jira-result-key { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); white-space: nowrap; min-width: 56px; }
@@ -382,7 +384,7 @@ input[type="color"] {
           <div class="jira-breadcrumb" id="jira-breadcrumb" style="flex:1;margin-bottom:0;"><span onclick="jiraBrowseProjects()">All projects</span></div>
           <button class="btn-add" id="jtab-search" onclick="setJiraTab('search')" style="flex-shrink:0;">Search</button>
         </div>
-        <div class="jira-results" id="jira-browse-results"><div class="jira-loading">Loading...</div></div>
+        <div class="jira-results-wrap"><div class="jira-results" id="jira-browse-results"></div></div>
       </div>
     </div>
     </div>
@@ -1613,7 +1615,7 @@ function showJiraDescriptionDialog(key, summary) {
   overlay.dataset.summary = summary;
   overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);';
   overlay.innerHTML =
-    '<div style="background:rgba(18,10,40,0.92);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.28);border-radius:24px;padding:22px;width:90%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,0.6);">' +
+    '<div style="background:rgba(255,255,255,0.07);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.18);border-top:1px solid rgba(255,255,255,0.4);border-radius:24px;padding:22px;width:90%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,0.6);">' +
       '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">' + esc(key) + '</div>' +
       '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:18px;line-height:1.4;">' + esc(summary) + '</div>' +
       '<label style="font-size:11px;color:rgba(255,255,255,0.45);font-weight:500;display:block;margin-bottom:6px;">Description <span style="opacity:0.5;font-weight:400;">(shown in Jira worklog)</span></label>' +
@@ -1630,6 +1632,20 @@ function showJiraDescriptionDialog(key, summary) {
 function closeJiraDescDialog() {
   var el = document.getElementById('jira-desc-overlay');
   if (el) el.remove();
+}
+
+function confirmJiraIssueFromDialog() {
+  var overlay = document.getElementById('jira-desc-overlay');
+  var key = overlay ? overlay.dataset.key : '';
+  var summary = overlay ? overlay.dataset.summary : '';
+  confirmJiraIssue(key, summary);
+}
+
+function confirmJiraIssueFromDialog() {
+  var overlay = document.getElementById('jira-desc-overlay');
+  var key = overlay ? overlay.dataset.key : '';
+  var summary = overlay ? overlay.dataset.summary : '';
+  confirmJiraIssue(key, summary);
 }
 
 function confirmJiraIssue(key, summary) {
@@ -1669,7 +1685,7 @@ function showSendToJiraDialog(id) {
   overlay.id = 'jira-send-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);';
   overlay.innerHTML =
-    '<div style="background:rgba(18,10,40,0.92);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,0.12);border-top:1px solid rgba(255,255,255,0.28);border-radius:24px;padding:22px;width:90%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,0.6);">' +
+    '<div style="background:rgba(255,255,255,0.07);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.18);border-top:1px solid rgba(255,255,255,0.4);border-radius:24px;padding:22px;width:90%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,0.6);">' +
       '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">' + esc(entry.jiraKey) + '</div>' +
       '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:18px;line-height:1.4;">' + esc(entry.jiraSummary || entry.name) + '</div>' +
       '<div style="display:flex;gap:10px;margin-bottom:14px;">' +
