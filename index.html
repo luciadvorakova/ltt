@@ -107,7 +107,7 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .entry-card { padding: 12px 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; overflow: visible; position: relative; border-top: 1px solid rgba(255,255,255,0.16); transition: transform 0.15s, opacity 0.15s; }
 .entry-card:first-child { border-top: none; padding-top: 4px; }
 .entry-info { flex: 1; min-width: 0; }
-.entry-name { font-size: 14px; font-weight: 600; overflow: visible; display: flex; align-items: center; flex-wrap: nowrap; gap: 0; }
+.entry-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; flex-wrap: nowrap; gap: 0; }
 .entry-meta { font-size: 12px; margin-top: 2px; color: var(--text2); }
 .entry-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .entry-time { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -205,7 +205,7 @@ input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
 .jira-breadcrumb span { cursor: pointer; }
 .jira-breadcrumb span:hover { color: white; }
 .jira-loading { text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; padding: 1.5rem 0; }
-.jira-issue-key-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); margin-left: 6px; display: inline-flex; align-items: center; vertical-align: middle; }
+.jira-issue-key-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); margin-left: 0; margin-right: 6px; display: inline-flex; align-items: center; vertical-align: middle; white-space: nowrap; flex-shrink: 0; }
 .add-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
 .mode-btn { padding: 0; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.4); transition: color 0.15s; }
 .mode-btn:hover { color: rgba(255,255,255,0.7); }
@@ -231,7 +231,7 @@ input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
 .jira-breadcrumb span { cursor: pointer; }
 .jira-breadcrumb span:hover { color: white; }
 .jira-loading { text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; padding: 1.5rem 0; }
-.jira-issue-key-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); margin-left: 6px; display: inline-flex; align-items: center; vertical-align: middle; }
+.jira-issue-key-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.7); margin-left: 0; margin-right: 6px; display: inline-flex; align-items: center; vertical-align: middle; white-space: nowrap; flex-shrink: 0; }
 .add-mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
 .mode-btn { padding: 0; border: none; background: none; cursor: pointer; font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.4); transition: color 0.15s; }
 .mode-btn:hover { color: rgba(255,255,255,0.7); }
@@ -355,7 +355,7 @@ input[type="color"] {
             fill="url(#tgFill)" stroke="url(#tgStroke)" stroke-width="0.6"
             paint-order="stroke">00:00:00</text>
       </svg>
-      <div class="timer-sub" id="running-label" style="min-height:18px;"></div>
+
     </div>
 
     <!-- Mode toggle row -->
@@ -375,7 +375,7 @@ input[type="color"] {
           <input type="text" id="jira-search-input" placeholder="Search Jira issues..." oninput="debounceJiraSearch(this.value)" style="flex:1;" />
           <button class="btn-add" id="jtab-browse" onclick="setJiraTab('browse')" style="flex-shrink:0;">Browse</button>
         </div>
-        <div class="jira-results" id="jira-search-results"><div class="jira-loading">Type to search Jira issues</div></div>
+        <div class="jira-results" id="jira-search-results"></div>
       </div>
       <div id="jira-browse-pane" style="display:none;">
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
@@ -685,7 +685,7 @@ function startTimer() {
     setActiveTaskLabel(name);
     elapsed = 0; startedAt = null;
     document.getElementById('display').textContent = '00:00:00';
-    document.getElementById('running-label').textContent = 'Ready';
+    var _rl = document.getElementById('running-label'); if (_rl) _rl.textContent = '';
   }
   running = true;
   startedAt = Date.now() - elapsed;
@@ -693,7 +693,7 @@ function startTimer() {
   document.getElementById('btn-start').disabled = true;
   document.getElementById('btn-pause').disabled = false;
   document.getElementById('btn-save').disabled = false;
-  document.getElementById('running-label').textContent = 'Running...';
+  var _rl = document.getElementById('running-label'); if (_rl) _rl.textContent = '';
   renderToday();
 }
 
@@ -704,7 +704,7 @@ function pauseTimer() {
   document.getElementById('btn-start').textContent = 'Resume';
   document.getElementById('btn-start').disabled = false;
   document.getElementById('btn-pause').disabled = true;
-  document.getElementById('running-label').textContent = 'Paused';
+  var _rl = document.getElementById('running-label'); if (_rl) _rl.textContent = '';
 }
 
 function resetTimer(keepActive) {
@@ -717,7 +717,7 @@ function resetTimer(keepActive) {
   document.getElementById('btn-start').disabled = false;
   document.getElementById('btn-pause').disabled = true;
   document.getElementById('btn-save').disabled = true;
-  document.getElementById('running-label').textContent = activeEntryId ? 'Running...' : '';
+  var _rl = document.getElementById('running-label'); if (_rl) _rl.textContent = '';
 }
 
 function addTask() {
@@ -771,7 +771,7 @@ function trackEntry(id) {
   setActiveTaskLabel(entry.name);
   document.getElementById('display').textContent = '00:00:00';
   document.getElementById('btn-start').textContent = 'Start';
-  document.getElementById('running-label').textContent = 'Ready';
+  var _rl = document.getElementById('running-label'); if (_rl) _rl.textContent = '';
   document.getElementById('btn-save').disabled = false;
   renderToday();
   startTimer();
@@ -802,7 +802,7 @@ function saveEntry() {
   document.getElementById('btn-start').disabled = true;
   document.getElementById('btn-pause').disabled = true;
   document.getElementById('btn-save').disabled = true;
-  document.getElementById('running-label').textContent = '';
+  var _rl = document.getElementById('running-label'); if (_rl) _rl.textContent = '';
   renderToday();
 }
 
@@ -1423,7 +1423,7 @@ function setJiraTab(tab) {
 function debounceJiraSearch(val) {
   clearTimeout(_jiraSearchTimer);
   if (!val.trim()) {
-    document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Type to search Jira issues</div>';
+    document.getElementById('jira-search-results').innerHTML = '';
     return;
   }
   document.getElementById('jira-search-results').innerHTML = '<div class="jira-loading">Searching...</div>';
@@ -1647,7 +1647,7 @@ function confirmJiraIssue(key, summary) {
   var searchInput = document.getElementById('jira-search-input');
   if (searchInput) { searchInput.value = ''; }
   var searchResults = document.getElementById('jira-search-results');
-  if (searchResults) searchResults.innerHTML = '<div class="jira-loading">Type to search Jira issues</div>';
+  if (searchResults) searchResults.innerHTML = '';
   renderToday();
 }
 
