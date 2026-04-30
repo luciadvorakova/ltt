@@ -196,8 +196,6 @@ input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
 .jira-search-row input { flex: 1; padding: 9px 16px; border-radius: 99px; font-size: 13px; background: var(--input-bg); border: 1px solid var(--liq-border); color: white; outline: none; box-shadow: var(--liq-shadow-sm); }
 .jira-search-row input::placeholder { color: rgba(255,255,255,0.4); }
 .jira-results-wrap { position: relative; }
-.jira-results { position: absolute; top: 4px; left: 0; right: 0; z-index: 999; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border: 1px solid rgba(255,255,255,0.18); border-top-color: rgba(255,255,255,0.32); border-radius: 14px; padding: 6px; box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.18); background: rgba(8,14,32,0.45); isolation: isolate; }
-.jira-results::before { content: ''; position: absolute; inset: 0; border-radius: 14px; backdrop-filter: blur(40px) saturate(160%) brightness(0.65); -webkit-backdrop-filter: blur(40px) saturate(160%) brightness(0.65); z-index: -1; pointer-events: none; }
 .jira-result-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; background: var(--liq-bg); border: 1px solid var(--liq-border); border-top-color: var(--glass-border-top, rgba(255,255,255,0.45)); box-shadow: var(--liq-shadow-sm); transition: background 0.1s; }
 .jira-result-item:hover { background: rgba(255,255,255,0.2); }
 .jira-result-key { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); white-space: nowrap; min-width: 56px; }
@@ -348,17 +346,17 @@ input[type="color"] {
       <div id="jira-add" style="display:block;" class="jira-picker">
       <div id="jira-search-pane">
         <div class="jira-search-row" style="display:flex;gap:8px;align-items:stretch;">
-          <input type="text" id="jira-search-input" placeholder="Search Jira issues..." oninput="debounceJiraSearch(this.value)" style="flex:1;" />
+          <input type="text" id="jira-search-input" placeholder="Search Jira issues..." oninput="debounceJiraSearch(this.value)" onfocus="repositionSearchDropdown()" style="flex:1;" />
           <button class="btn-add" id="jtab-browse" onclick="setJiraTab('browse')" style="flex-shrink:0;">Browse</button>
         </div>
-        <div class="jira-results-wrap"><div class="jira-results" id="jira-search-results" style="display:none;"></div></div>
+        <div class="jira-results-wrap" id="jira-search-anchor"></div>
       </div>
       <div id="jira-browse-pane" style="display:none;">
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
           <div class="jira-breadcrumb" id="jira-breadcrumb" style="flex:1;margin-bottom:0;"><span onclick="jiraBrowseProjects()">All projects</span></div>
           <button class="btn-add" id="jtab-search" onclick="setJiraTab('search')" style="flex-shrink:0;">Search</button>
         </div>
-        <div class="jira-results-wrap"><div class="jira-results" id="jira-browse-results"></div></div>
+        <div class="jira-results-wrap" id="jira-browse-anchor"></div>
       </div>
     </div>
     </div>
@@ -1395,7 +1393,28 @@ function setJiraTab(tab) {
   _jiraTab = tab;
   document.getElementById('jira-search-pane').style.display = tab === 'search' ? 'block' : 'none';
   document.getElementById('jira-browse-pane').style.display = tab === 'browse' ? 'block' : 'none';
-  if (tab === 'browse') jiraBrowse('projects', null, null, []);
+  if (tab === 'search') { var br = document.getElementById('jira-browse-results'); if (br) { br.style.display = 'none'; br.innerHTML = ''; } }
+  if (tab === 'browse') { var sr = document.getElementById('jira-search-results'); if (sr) { sr.style.display = 'none'; sr.innerHTML = ''; } jiraBrowse('projects', null, null, []); }
+}
+window.addEventListener('resize', function() { repositionSearchDropdown(); repositionBrowseDropdown(); });
+
+function repositionSearchDropdown() {
+  var anchor = document.getElementById('jira-search-anchor');
+  var portal = document.getElementById('jira-search-results');
+  if (!anchor || !portal) return;
+  var r = anchor.getBoundingClientRect();
+  portal.style.top = (r.top + 4) + 'px';
+  portal.style.left = r.left + 'px';
+  portal.style.width = r.width + 'px';
+}
+function repositionBrowseDropdown() {
+  var anchor = document.getElementById('jira-browse-anchor');
+  var portal = document.getElementById('jira-browse-results');
+  if (!anchor || !portal) return;
+  var r = anchor.getBoundingClientRect();
+  portal.style.top = (r.top + 4) + 'px';
+  portal.style.left = r.left + 'px';
+  portal.style.width = r.width + 'px';
 }
 
 function debounceJiraSearch(val) {
@@ -1406,6 +1425,7 @@ function debounceJiraSearch(val) {
     el.style.display = 'none';
     return;
   }
+  repositionSearchDropdown();
   el.innerHTML = '<div class="jira-loading">Searching...</div>';
   el.style.display = 'flex';
   _jiraSearchTimer = setTimeout(function() { jiraSearch(val); }, 400);
@@ -1437,6 +1457,7 @@ async function jiraSearch(query) {
 
 function renderJiraSearchResults(issues, query) {
   var el = document.getElementById('jira-search-results');
+  repositionSearchDropdown();
   el.style.display = 'flex';
   if (!issues.length) { el.innerHTML = '<div class="jira-loading">No issues found for "' + esc(query) + '"</div>'; return; }
   el.innerHTML = issues.map(function(issue) {
@@ -1449,6 +1470,7 @@ function renderJiraSearchResults(issues, query) {
 
 function renderJiraSearchResultsFull(issues) {
   var el = document.getElementById('jira-search-results');
+  repositionSearchDropdown();
   el.style.display = 'flex';
   if (!issues.length) { el.innerHTML = '<div class="jira-loading">No issues found</div>'; return; }
   var seen = {}; issues = issues.filter(function(i) { if (seen[i.key]) return false; seen[i.key] = true; return true; });
@@ -1467,6 +1489,8 @@ async function jiraBrowse(level, key, name, breadcrumb) {
   _jiraBrowseState.level = level;
   var bc = document.getElementById('jira-breadcrumb');
   var res = document.getElementById('jira-browse-results');
+  repositionBrowseDropdown();
+  res.style.display = 'flex';
   res.innerHTML = '<div class="jira-loading">Loading...</div>';
 
   // breadcrumb is an array of {key, name, level} for navigation history
@@ -2166,6 +2190,10 @@ renderToday();
     </div>
   </div>
 </div>
+
+<!-- Jira results portals — outside glass-app so backdrop-filter works -->
+<div id="jira-search-results" style="display:none;position:fixed;z-index:9999;max-height:220px;overflow-y:auto;flex-direction:column;gap:4px;border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);border-radius:14px;padding:6px;box-shadow:0 8px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.18);background:rgba(10,16,36,0.45);backdrop-filter:blur(40px) saturate(160%) brightness(0.7);-webkit-backdrop-filter:blur(40px) saturate(160%) brightness(0.7);"></div>
+<div id="jira-browse-results" style="display:none;position:fixed;z-index:9999;max-height:220px;overflow-y:auto;flex-direction:column;gap:4px;border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);border-radius:14px;padding:6px;box-shadow:0 8px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.18);background:rgba(10,16,36,0.45);backdrop-filter:blur(40px) saturate(160%) brightness(0.7);-webkit-backdrop-filter:blur(40px) saturate(160%) brightness(0.7);"></div>
 
 <div id="floating-menu" style="display:none;position:fixed;z-index:99999;min-width:188px;border-radius:14px;overflow:hidden;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);"></div>
 </body>
