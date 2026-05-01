@@ -850,6 +850,7 @@ function renderHistory() {
   el.innerHTML = days.map(function(day) {
     const dayEntries = byDay[day].sort(function(a,b){ return b.ts - a.ts; });
     const total = dayEntries.reduce(function(s,e){ return s + (e.ms||0); }, 0);
+    const hasUnsent = isJiraConnected() && dayEntries.some(function(e) { return e.jiraKey && !e.jiraSent && e.ms > 0; });
     const rows = dayEntries.map(function(e) {
       const dark = isDarkMode();
     const cardBg = 'transparent';
@@ -858,9 +859,8 @@ function renderHistory() {
     const cardText = 'rgba(255,255,255,1)';
       return '<div class="entry-card" data-id="' + e.id + '">' +
         '<div class="entry-info">' +
-          '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' : '') + esc(e.jiraSummary || e.name) + '</div>' +
+          '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' : '') + esc(e.jiraSummary || e.name) + (e.jiraSent ? ' <span style="font-size:10px;color:rgba(160,255,180,0.7);font-weight:600;">✓</span>' : '') + '</div>' +
           (e.jiraDesc ? '<div class="entry-meta" style="margin-top:1px;">' + esc(e.jiraDesc) + '</div>' : '') +
-  
         '</div>' +
         '<div class="entry-actions">' +
           '<span class="entry-time">' + fmtShort(e.ms) + '</span>' +
@@ -870,7 +870,10 @@ function renderHistory() {
     return '<div class="history-day">' +
       '<div class="history-day-header">' +
         '<span class="history-day-label">' + dayLabel(day) + '</span>' +
-        '<span class="history-day-total">' + fmtTotal(total) + '</span>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          (hasUnsent ? '<button onclick="showBulkJiraModalForDay(\'' + day + '\')" style="padding:3px 11px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,255,180,0.95);background:rgba(160,255,180,0.1);border:1px solid rgba(160,255,180,0.28);white-space:nowrap;">↑ Send to Jira</button>' : '') +
+          '<span class="history-day-total">' + fmtTotal(total) + '</span>' +
+        '</div>' +
       '</div>' +
       '<div class="entries-list">' + rows + '</div>' +
     '</div>';
@@ -1867,6 +1870,21 @@ function getBulkEntries() {
   var todayEntries = entries.filter(function(e) { return e.jiraKey && !e.jiraSent && e.ms > 0 && dayKey(e.ts) === todayKey; });
   var olderEntries = entries.filter(function(e) { return e.jiraKey && !e.jiraSent && e.ms > 0 && dayKey(e.ts) !== todayKey && e.ts > twoWeeksAgo; }).sort(function(a,b) { return b.ts - a.ts; });
   return { today: todayEntries, older: olderEntries };
+}
+
+function showBulkJiraModalForDay(day) {
+  if (!isJiraConnected()) { alert('Please connect to Jira in Settings first.'); return; }
+  var entries = loadEntries();
+  var dayEntries = entries.filter(function(e) { return e.jiraKey && !e.jiraSent && e.ms > 0 && dayKey(e.ts) === day; });
+  if (!dayEntries.length) { alert('No unsent Jira entries for this day.'); return; }
+  _bulkSelected = {};
+  _bulkDescCache = {};
+  _bulkDateCache = {};
+  dayEntries.forEach(function(e) { _bulkSelected[e.id] = true; });
+  var list = document.getElementById('bulk-jira-list');
+  list.innerHTML = '<div class="bulk-section-label">' + dayLabel(day) + '</div>' + dayEntries.map(bulkEntryHTML).join('');
+  updateBulkCount();
+  document.getElementById('bulk-jira-modal').style.display = 'flex';
 }
 
 function showBulkJiraModal() {
