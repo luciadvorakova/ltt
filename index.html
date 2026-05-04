@@ -236,6 +236,9 @@ input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
 
 /* Settings */
 .settings-section { position: relative; overflow: hidden; background: var(--liq-bg); border: 1px solid var(--liq-border); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--liq-shadow); }
+.modal-glass-panel { position: relative; border-radius: 24px; background: var(--liq-bg); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border: 1px solid var(--liq-border); border-top-color: rgba(255,255,255,0.45); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 32px 80px rgba(0,0,0,0.5); overflow: hidden; }
+.modal-glass-panel::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.55),rgba(255,255,255,0.75),rgba(255,255,255,0.55),transparent); pointer-events:none; z-index:1; }
+.modal-glass-panel::after { content:''; position:absolute; top:0; left:0; right:0; height:70px; background:linear-gradient(180deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.04) 50%,transparent 100%); border-radius:24px 24px 0 0; pointer-events:none; z-index:0; }
 .settings-section::after { content:''; position:absolute; top:0; left:0; right:0; height:50px; background: linear-gradient(90deg, rgba(255,160,210,0.05) 0%, rgba(180,140,255,0.07) 25%, rgba(120,190,255,0.05) 50%, rgba(160,255,200,0.03) 75%, rgba(255,220,140,0.04) 100%); border-radius:var(--radius-lg) var(--radius-lg) 0 0; pointer-events:none; }
 .settings-label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; position: relative; }
 .gradient-presets { display: flex; gap: 10px; flex-wrap: wrap; position: relative; margin-bottom: 1.5rem; }
@@ -1704,9 +1707,9 @@ function showSendToJiraDialog(id) {
   if (mins < 1) mins = 1;
   var overlay = document.createElement('div');
   overlay.id = 'jira-send-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);';
   overlay.innerHTML =
-    '<div style="background:rgba(255,255,255,0.07);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.18);border-top:1px solid rgba(255,255,255,0.4);border-radius:24px;padding:22px;width:90%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,0.6);">' +
+    '<div class="modal-glass-panel" style="padding:22px;width:90%;max-width:420px;">' +
       '<div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">' + esc(entry.jiraKey) + '</div>' +
       '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:18px;line-height:1.4;">' + esc(entry.jiraSummary || entry.name) + '</div>' +
       '<div style="display:flex;gap:10px;margin-bottom:14px;">' +
@@ -1750,13 +1753,11 @@ function editJiraDesc(id) {
   var entries = loadEntries();
   var entry = entries.find(function(e) { return e.id === Number(id); });
   if (!entry) return;
-  var dark = isDarkMode();
-  var panelBg = dark ? 'rgba(20,10,40,0.85)' : 'rgba(220,210,250,0.75)';
   var overlay = document.createElement('div');
   overlay.id = 'jira-editdesc-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);backdrop-filter:blur(4px);';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);';
   overlay.innerHTML =
-    '<div style="background:' + panelBg + ';backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,' + (dark?'0.18':'0.5') + ');border-top-color:rgba(255,255,255,' + (dark?'0.3':'0.8') + ');border-radius:20px;padding:24px;width:90%;max-width:420px;box-shadow:0 16px 48px rgba(0,0,0,0.3);">' +
+    '<div class="modal-glass-panel" style="padding:24px;width:90%;max-width:420px;">' +
       '<div style="font-size:15px;font-weight:600;color:white;margin-bottom:14px;">' + esc(entry.jiraSummary || entry.name) + '</div>' +
       '<label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;display:block;margin-bottom:6px;">Description</label>' +
       '<textarea id="jira-editdesc-input" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);color:white;outline:none;resize:vertical;font-family:inherit;">' + esc(entry.jiraDesc || '') + '</textarea>' +
@@ -2318,7 +2319,7 @@ renderToday();
 <div id="grain-overlay"></div>
 <!-- Bulk Jira Upload Modal -->
 <div id="bulk-jira-modal" style="display:none;position:fixed;inset:0;z-index:99997;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
-  <div id="bulk-jira-panel" style="position:relative;width:92%;max-width:500px;max-height:84vh;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;background:rgba(255,255,255,0.07);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.14);border-top:1px solid rgba(255,255,255,0.38);box-shadow:inset 0 1px 0 rgba(255,255,255,0.22),inset 0 -1px 0 rgba(255,255,255,0.04),0 32px 80px rgba(0,0,0,0.55);">
+  <div id="bulk-jira-panel" class="modal-glass-panel" style="width:92%;max-width:500px;max-height:84vh;display:flex;flex-direction:column;box-shadow:inset 0 1px 0 rgba(255,255,255,0.28),0 32px 80px rgba(0,0,0,0.5);">
     <div style="position:absolute;top:0;left:0;right:0;height:70px;background:linear-gradient(180deg,rgba(255,255,255,0.13) 0%,rgba(255,255,255,0.05) 50%,transparent 100%);border-radius:24px 24px 0 0;pointer-events:none;z-index:0;"></div>
     <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.55),rgba(255,255,255,0.75),rgba(255,255,255,0.55),transparent);border-radius:24px 24px 0 0;pointer-events:none;z-index:1;"></div>
     <div style="position:relative;z-index:2;padding:20px 22px 16px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
@@ -2343,7 +2344,7 @@ renderToday();
 
 <!-- Slack Standup Modal -->
 <div id="slack-standup-modal" style="display:none;position:fixed;inset:0;z-index:99997;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
-  <div style="position:relative;width:92%;max-width:520px;max-height:88vh;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;background:rgba(255,255,255,0.07);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.14);border-top:1px solid rgba(255,255,255,0.38);box-shadow:inset 0 1px 0 rgba(255,255,255,0.22),0 32px 80px rgba(0,0,0,0.55);">
+  <div class="modal-glass-panel" style="width:92%;max-width:520px;max-height:88vh;display:flex;flex-direction:column;">
     <div style="position:absolute;top:0;left:0;right:0;height:70px;background:linear-gradient(180deg,rgba(255,255,255,0.13) 0%,rgba(255,255,255,0.05) 50%,transparent 100%);border-radius:24px 24px 0 0;pointer-events:none;z-index:0;"></div>
     <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.55),rgba(255,255,255,0.75),rgba(255,255,255,0.55),transparent);pointer-events:none;z-index:1;"></div>
     <!-- Header -->
