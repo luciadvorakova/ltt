@@ -413,6 +413,15 @@ input[type="color"] {
           <span id="jira-status" style="font-size:12px;color:rgba(255,255,255,0.55);"></span>
         </div>
       </div>
+      <div class="settings-label" style="margin-top:0.5rem;">Slack standup</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;position:relative;">
+        <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;">Set the default channel for your daily standup message.</p>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="slack-channel-input" placeholder="#daily-standup" style="flex:1;padding:9px 16px;border-radius:99px;font-size:13px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
+          <button onclick="saveSlackChannel()" class="btn primary" style="padding:9px 18px;font-size:13px;flex-shrink:0;">Save</button>
+        </div>
+        <span id="slack-channel-status" style="font-size:12px;color:rgba(255,255,255,0.55);min-height:16px;"></span>
+      </div>
       <div class="settings-label">Background gradient</div>
       <div class="gradient-presets" id="gradient-presets"></div>
 
@@ -872,6 +881,7 @@ function renderHistory() {
         '<span class="history-day-label">' + dayLabel(day) + '</span>' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
           (hasUnsent ? '<button onclick="showBulkJiraModalForDay(\'' + day + '\')" style="padding:3px 11px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,255,180,0.95);background:rgba(160,255,180,0.1);border:1px solid rgba(160,255,180,0.28);white-space:nowrap;">↑ Send to Jira</button>' : '') +
+          (localStorage.getItem('slack_channel') ? '<button onclick="showSlackStandupModal(\'' + day + '\')" style="padding:3px 11px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,200,255,0.95);background:rgba(160,200,255,0.1);border:1px solid rgba(160,200,255,0.28);white-space:nowrap;">💬 Standup</button>' : '') +
           '<span class="history-day-total">' + fmtTotal(total) + '</span>' +
         '</div>' +
       '</div>' +
@@ -890,7 +900,7 @@ function showTab(name) {
   });
   if (name === 'history') renderHistory();
   if (name === 'weekly') renderWeekly();
-  if (name === 'settings') renderSettings();
+  if (name === 'settings') { renderSettings(); loadSlackChannelSetting(); }
 }
 
 
@@ -2168,10 +2178,112 @@ function renderSettings() {
   if (el) el.innerHTML = swatchHtml;
 }
 
+// ---- SLACK STANDUP ----
+
+function saveSlackChannel() {
+  var input = document.getElementById('slack-channel-input');
+  var status = document.getElementById('slack-channel-status');
+  var val = (input.value || '').trim();
+  if (!val) { status.textContent = 'Please enter a channel name.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
+  if (!val.startsWith('#')) val = '#' + val;
+  localStorage.setItem('slack_channel', val);
+  input.value = val;
+  status.textContent = 'Channel saved!';
+  status.style.color = 'rgba(160,255,180,0.9)';
+  setTimeout(function() { status.textContent = ''; }, 2500);
+  renderHistory();
+}
+
+function loadSlackChannelSetting() {
+  var ch = localStorage.getItem('slack_channel') || '';
+  var input = document.getElementById('slack-channel-input');
+  if (input) input.value = ch;
+}
+
+function showSlackStandupModal(day) {
+  var entries = loadEntries();
+  var dayEntries = entries.filter(function(e) { return (!e.untracked || e.ms > 0) && dayKey(e.ts) === day; });
+  var channel = localStorage.getItem('slack_channel') || '';
+  document.getElementById('slack-standup-channel').textContent = channel ? 'Sending to ' + channel : 'No channel set';
+  var listEl = document.getElementById('slack-accomplished-list');
+  listEl.innerHTML = dayEntries.map(function(e) {
+    var label = e.jiraSummary || e.name;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);">' +
+      (e.jiraKey ? '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:99px;padding:1px 8px;flex-shrink:0;">' + esc(e.jiraKey) + '</span>' : '') +
+      '<span style="font-size:13px;color:white;flex:1;">' + esc(label) + '</span>' +
+      '<span style="font-size:11px;color:rgba(255,255,255,0.4);flex-shrink:0;">' + fmtShort(e.ms) + '</span>' +
+    '</div>';
+  }).join('') || '<div style="font-size:12px;color:rgba(255,255,255,0.3);padding:4px 2px;">No tasks tracked this day.</div>';
+  document.getElementById('slack-workon-input').value = '';
+  document.getElementById('slack-send-status').textContent = '';
+  document.getElementById('slack-send-btn').disabled = false;
+  document.getElementById('slack-standup-modal')._day = day;
+  document.getElementById('slack-standup-modal').style.display = 'flex';
+}
+
+function closeSlackStandupModal() {
+  document.getElementById('slack-standup-modal').style.display = 'none';
+}
+
+async function sendSlackStandup() {
+  var channel = localStorage.getItem('slack_channel');
+  if (!channel) { alert('Please set a Slack channel in Settings first.'); return; }
+  var modal = document.getElementById('slack-standup-modal');
+  var day = modal._day;
+  var entries = loadEntries();
+  var dayEntries = entries.filter(function(e) { return (!e.untracked || e.ms > 0) && dayKey(e.ts) === day; });
+  var workOn = (document.getElementById('slack-workon-input').value || '').trim();
+  var status = document.getElementById('slack-send-status');
+  var btn = document.getElementById('slack-send-btn');
+
+  var accomplished = dayEntries.map(function(e) {
+    return (e.jiraKey ? e.jiraKey + ' ' : '') + (e.jiraSummary || e.name);
+  }).join('\n');
+
+  var message = ':boom: submission from @Lucia\n\n' +
+    ':rocket: *I accomplished:*\n' + (accomplished || '—') + '\n\n' +
+    ':soon: *I will work on:*\n' + (workOn || '—') + '\n\n' +
+    ':rotating_light: *Possible problems:*\n\n' +
+    ':heads_down: *I would like to share:*';
+
+  btn.disabled = true;
+  status.textContent = 'Sending…';
+  status.style.color = 'rgba(255,255,255,0.55)';
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        mcp_servers: [{ type: 'url', url: 'https://mcp.slack.com/mcp', name: 'slack' }],
+        messages: [{
+          role: 'user',
+          content: 'Send this exact message to the Slack channel "' + channel + '". Do not modify the message in any way:\n\n' + message
+        }]
+      })
+    });
+    var data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+    var resultText = (data.content || []).filter(function(b) { return b.type === 'text'; }).map(function(b) { return b.text; }).join(' ').toLowerCase();
+    if (resultText.includes('unable') || resultText.includes('cannot') || resultText.includes('error') && !resultText.includes('no error')) throw new Error('Could not send. Check channel name in Settings.');
+    status.textContent = '✓ Sent to ' + channel + '!';
+    status.style.color = 'rgba(160,255,180,0.9)';
+    btn.disabled = false;
+    setTimeout(closeSlackStandupModal, 1800);
+  } catch (err) {
+    status.textContent = '✗ ' + (err.message || 'Failed to send.');
+    status.style.color = 'rgba(255,160,160,0.9)';
+    btn.disabled = false;
+  }
+}
+
 resetTimer(false);
 loadGradientSetting();
 loadTitle();
 loadBgImage();
+loadSlackChannelSetting();
 // Handle OAuth callback if returning from Atlassian
 if (window.location.search.includes('code=')) { handleOAuthCallback(); }
 renderToday();
@@ -2208,6 +2320,50 @@ renderToday();
 <!-- Jira results portals — outside glass-app so backdrop-filter works -->
 <div id="jira-search-results" style="display:none;position:fixed;z-index:9999;max-height:220px;overflow-y:auto;flex-direction:column;gap:4px;border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);border-radius:14px;padding:6px;box-shadow:0 8px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.18);background:rgba(10,16,36,0.45);backdrop-filter:blur(40px) saturate(160%) brightness(0.7);-webkit-backdrop-filter:blur(40px) saturate(160%) brightness(0.7);"></div>
 <div id="jira-browse-results" style="display:none;position:fixed;z-index:9999;max-height:220px;overflow-y:auto;flex-direction:column;gap:4px;border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);border-radius:14px;padding:6px;box-shadow:0 8px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.18);background:rgba(10,16,36,0.45);backdrop-filter:blur(40px) saturate(160%) brightness(0.7);-webkit-backdrop-filter:blur(40px) saturate(160%) brightness(0.7);"></div>
+
+<!-- Slack Standup Modal -->
+<div id="slack-standup-modal" style="display:none;position:fixed;inset:0;z-index:99997;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
+  <div style="position:relative;width:92%;max-width:520px;max-height:88vh;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;background:rgba(255,255,255,0.07);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.14);border-top:1px solid rgba(255,255,255,0.38);box-shadow:inset 0 1px 0 rgba(255,255,255,0.22),0 32px 80px rgba(0,0,0,0.55);">
+    <div style="position:absolute;top:0;left:0;right:0;height:70px;background:linear-gradient(180deg,rgba(255,255,255,0.13) 0%,rgba(255,255,255,0.05) 50%,transparent 100%);border-radius:24px 24px 0 0;pointer-events:none;z-index:0;"></div>
+    <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.55),rgba(255,255,255,0.75),rgba(255,255,255,0.55),transparent);pointer-events:none;z-index:1;"></div>
+    <!-- Header -->
+    <div style="position:relative;z-index:2;padding:20px 22px 16px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:white;letter-spacing:-0.2px;">💬 Daily Standup</div>
+        <div id="slack-standup-channel" style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:3px;"></div>
+      </div>
+      <button onclick="closeSlackStandupModal()" class="btn" style="padding:6px 16px;font-size:12px;">Close</button>
+    </div>
+    <!-- Body -->
+    <div style="position:relative;z-index:2;overflow-y:auto;flex:1;padding:18px 22px;display:flex;flex-direction:column;gap:16px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.18) transparent;">
+      <!-- I accomplished -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">🚀 I accomplished:</div>
+        <div id="slack-accomplished-list" style="display:flex;flex-direction:column;gap:5px;"></div>
+      </div>
+      <!-- I will work on -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">⏩ I will work on:</div>
+        <textarea id="slack-workon-input" placeholder="What will you work on today?" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);color:white;outline:none;resize:vertical;font-family:inherit;box-sizing:border-box;line-height:1.5;"></textarea>
+      </div>
+      <!-- Possible problems -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">🚨 Possible problems:</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.25);font-style:italic;padding:0 2px;">—</div>
+      </div>
+      <!-- I would like to share -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">🙇 I would like to share:</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.25);font-style:italic;padding:0 2px;">—</div>
+      </div>
+      <div id="slack-send-status" style="font-size:12px;color:rgba(255,255,255,0.55);min-height:16px;"></div>
+    </div>
+    <!-- Footer -->
+    <div style="position:relative;z-index:2;padding:14px 22px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:flex-end;flex-shrink:0;">
+      <button onclick="sendSlackStandup()" id="slack-send-btn" class="btn primary" style="padding:10px 26px;">Send to Slack</button>
+    </div>
+  </div>
+</div>
 
 <div id="floating-menu" style="display:none;position:fixed;z-index:99999;min-width:188px;border-radius:14px;overflow:hidden;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);"></div>
 </body>
