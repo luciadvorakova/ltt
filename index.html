@@ -371,6 +371,7 @@ input[type="color"] {
       <span class="label">Total today</span>
       <div style="display:flex;align-items:center;gap:10px;">
         <button onclick="showBulkJiraModal()" id="bulk-jira-btn" style="display:none;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,255,180,0.95);background:rgba(160,255,180,0.1);border:1px solid rgba(160,255,180,0.28);white-space:nowrap;">↑ Send to Jira</button>
+        <button onclick="showSlackStandupModal()" id="standup-btn" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,200,255,0.95);background:rgba(160,200,255,0.1);border:1px solid rgba(160,200,255,0.28);white-space:nowrap;">Standup</button>
         <span class="val" id="today-total">0h 00m</span>
       </div>
     </div>
@@ -881,7 +882,7 @@ function renderHistory() {
         '<span class="history-day-label">' + dayLabel(day) + '</span>' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
           (hasUnsent ? '<button onclick="showBulkJiraModalForDay(\'' + day + '\')" style="padding:3px 11px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,255,180,0.95);background:rgba(160,255,180,0.1);border:1px solid rgba(160,255,180,0.28);white-space:nowrap;">↑ Send to Jira</button>' : '') +
-          (localStorage.getItem('slack_channel') ? '<button onclick="showSlackStandupModal(\'' + day + '\')" style="padding:3px 11px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,200,255,0.95);background:rgba(160,200,255,0.1);border:1px solid rgba(160,200,255,0.28);white-space:nowrap;">💬 Standup</button>' : '') +
+          '<button onclick="showSlackStandupModal(\'' + day + '\')" style="padding:3px 11px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,200,255,0.95);background:rgba(160,200,255,0.1);border:1px solid rgba(160,200,255,0.28);white-space:nowrap;">Standup</button>' +
           '<span class="history-day-total">' + fmtTotal(total) + '</span>' +
         '</div>' +
       '</div>' +
@@ -1894,6 +1895,8 @@ function showBulkJiraModalForDay(day) {
   var list = document.getElementById('bulk-jira-list');
   list.innerHTML = '<div class="bulk-section-label">' + dayLabel(day) + '</div>' + dayEntries.map(bulkEntryHTML).join('');
   updateBulkCount();
+  var btn = document.getElementById('bulk-send-btn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Send to Jira'; }
   document.getElementById('bulk-jira-modal').style.display = 'flex';
 }
 
@@ -1908,6 +1911,8 @@ function showBulkJiraModal() {
   all.forEach(function(e) { _bulkSelected[e.id] = true; });
   var dark = isDarkMode();
   renderBulkList(data);
+  var btn = document.getElementById('bulk-send-btn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Send to Jira'; }
   document.getElementById('bulk-jira-modal').style.display = 'flex';
 }
 
@@ -2201,23 +2206,45 @@ function loadSlackChannelSetting() {
 }
 
 function showSlackStandupModal(day) {
-  var entries = loadEntries();
-  var dayEntries = entries.filter(function(e) { return (!e.untracked || e.ms > 0) && dayKey(e.ts) === day; });
   var channel = localStorage.getItem('slack_channel') || '';
-  document.getElementById('slack-standup-channel').textContent = channel ? 'Sending to ' + channel : 'No channel set';
-  var listEl = document.getElementById('slack-accomplished-list');
-  listEl.innerHTML = dayEntries.map(function(e) {
-    var label = e.jiraSummary || e.name;
-    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);">' +
-      (e.jiraKey ? '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:99px;padding:1px 8px;flex-shrink:0;">' + esc(e.jiraKey) + '</span>' : '') +
-      '<span style="font-size:13px;color:white;flex:1;">' + esc(label) + '</span>' +
-      '<span style="font-size:11px;color:rgba(255,255,255,0.4);flex-shrink:0;">' + fmtShort(e.ms) + '</span>' +
-    '</div>';
-  }).join('') || '<div style="font-size:12px;color:rgba(255,255,255,0.3);padding:4px 2px;">No tasks tracked this day.</div>';
-  document.getElementById('slack-workon-input').value = '';
+  if (!channel) {
+    if (confirm('No Slack channel set yet. Go to Settings to add one?')) {
+      showTab('settings');
+      setTimeout(function() { document.getElementById('slack-channel-input').focus(); }, 100);
+    }
+    return;
+  }
+
+  var entries = loadEntries();
+  var todayKey = dayKey(Date.now());
+
+  // Yesterday = most recent past day that has tracked entries
+  var pastDays = entries
+    .filter(function(e) { return e.ms > 0 && dayKey(e.ts) !== todayKey; })
+    .map(function(e) { return dayKey(e.ts); });
+  var uniquePastDays = pastDays.filter(function(d, i) { return pastDays.indexOf(d) === i; }).sort().reverse();
+  var yesterdayKey = uniquePastDays[0] || null;
+
+  var yesterdayEntries = yesterdayKey
+    ? entries.filter(function(e) { return e.ms > 0 && dayKey(e.ts) === yesterdayKey; })
+    : [];
+
+  // Today = all entries in the timer tab (tracked or not)
+  var todayEntries = entries.filter(function(e) { return dayKey(e.ts) === todayKey; });
+
+  var accomplishedText = yesterdayEntries.map(function(e) {
+    return (e.jiraKey ? e.jiraKey + ' ' : '') + (e.jiraSummary || e.name);
+  }).join('\n');
+
+  var workOnText = todayEntries.map(function(e) {
+    return (e.jiraKey ? e.jiraKey + ' ' : '') + (e.jiraSummary || e.name);
+  }).join('\n');
+
+  document.getElementById('slack-standup-channel').textContent = 'Sending to ' + channel;
+  document.getElementById('slack-accomplished-input').value = accomplishedText;
+  document.getElementById('slack-workon-input').value = workOnText;
   document.getElementById('slack-send-status').textContent = '';
   document.getElementById('slack-send-btn').disabled = false;
-  document.getElementById('slack-standup-modal')._day = day;
   document.getElementById('slack-standup-modal').style.display = 'flex';
 }
 
@@ -2228,17 +2255,10 @@ function closeSlackStandupModal() {
 async function sendSlackStandup() {
   var channel = localStorage.getItem('slack_channel');
   if (!channel) { alert('Please set a Slack channel in Settings first.'); return; }
-  var modal = document.getElementById('slack-standup-modal');
-  var day = modal._day;
-  var entries = loadEntries();
-  var dayEntries = entries.filter(function(e) { return (!e.untracked || e.ms > 0) && dayKey(e.ts) === day; });
+  var accomplished = (document.getElementById('slack-accomplished-input').value || '').trim();
   var workOn = (document.getElementById('slack-workon-input').value || '').trim();
   var status = document.getElementById('slack-send-status');
   var btn = document.getElementById('slack-send-btn');
-
-  var accomplished = dayEntries.map(function(e) {
-    return (e.jiraKey ? e.jiraKey + ' ' : '') + (e.jiraSummary || e.name);
-  }).join('\n');
 
   var message = ':boom: submission from @Lucia\n\n' +
     ':rocket: *I accomplished:*\n' + (accomplished || '—') + '\n\n' +
@@ -2339,12 +2359,12 @@ renderToday();
       <!-- I accomplished -->
       <div>
         <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">🚀 I accomplished:</div>
-        <div id="slack-accomplished-list" style="display:flex;flex-direction:column;gap:5px;"></div>
+        <textarea id="slack-accomplished-input" rows="4" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);color:white;outline:none;resize:vertical;font-family:inherit;box-sizing:border-box;line-height:1.6;"></textarea>
       </div>
       <!-- I will work on -->
       <div>
         <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;">⏩ I will work on:</div>
-        <textarea id="slack-workon-input" placeholder="What will you work on today?" rows="3" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);color:white;outline:none;resize:vertical;font-family:inherit;box-sizing:border-box;line-height:1.5;"></textarea>
+        <textarea id="slack-workon-input" rows="4" style="width:100%;padding:10px 14px;border-radius:14px;font-size:13px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);color:white;outline:none;resize:vertical;font-family:inherit;box-sizing:border-box;line-height:1.6;"></textarea>
       </div>
       <!-- Possible problems -->
       <div>
