@@ -236,7 +236,7 @@ input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
 
 /* Settings */
 .settings-section { position: relative; overflow: hidden; background: var(--liq-bg); border: 1px solid var(--liq-border); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--liq-shadow); }
-.modal-glass-panel { position: relative; border-radius: 24px; background: var(--liq-bg); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border: 1px solid var(--liq-border); border-top-color: rgba(255,255,255,0.45); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 32px 80px rgba(0,0,0,0.5); overflow: hidden; }
+.modal-glass-panel { position: relative; border-radius: 24px; background: rgba(255,255,255,0.13); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border: 1px solid rgba(255,255,255,0.2); border-top-color: rgba(255,255,255,0.45); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 32px 80px rgba(0,0,0,0.5); overflow: hidden; }
 .modal-glass-panel::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.55),rgba(255,255,255,0.75),rgba(255,255,255,0.55),transparent); pointer-events:none; z-index:1; }
 .modal-glass-panel::after { content:''; position:absolute; top:0; left:0; right:0; height:70px; background:linear-gradient(180deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.04) 50%,transparent 100%); border-radius:24px 24px 0 0; pointer-events:none; z-index:0; }
 .settings-section::after { content:''; position:absolute; top:0; left:0; right:0; height:50px; background: linear-gradient(90deg, rgba(255,160,210,0.05) 0%, rgba(180,140,255,0.07) 25%, rgba(120,190,255,0.05) 50%, rgba(160,255,200,0.03) 75%, rgba(255,220,140,0.04) 100%); border-radius:var(--radius-lg) var(--radius-lg) 0 0; pointer-events:none; }
@@ -1942,11 +1942,11 @@ function bulkEntryHTML(e) {
     (checked ?
       '<div style="display:flex;align-items:center;gap:8px;padding-left:28px;" onclick="event.stopPropagation()">' +
         '<label style="font-size:11px;color:rgba(255,255,255,0.4);flex-shrink:0;width:32px;">Date</label>' +
-        '<input type="date" class="bulk-date-input" data-id="' + e.id + '" value="' + localDateValue(e.ts) + '" onclick="event.stopPropagation()" style="font-size:12px;padding:4px 10px;width:150px;flex-shrink:0;" />' +
+        '<input type="date" class="bulk-date-input" data-id="' + e.id + '" value="' + localDateValue(e.ts) + '" onclick="event.stopPropagation()" style="font-size:12px;padding:5px 12px;width:160px;flex-shrink:0;border-radius:99px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;outline:none;font-family:inherit;color-scheme:dark;" />' +
       '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;padding-left:28px;" onclick="event.stopPropagation()">' +
         '<label style="font-size:11px;color:rgba(255,255,255,0.4);flex-shrink:0;width:32px;">Desc</label>' +
-        '<input type="text" class="bulk-desc-input" data-id="' + e.id + '" value="' + esc(e.jiraDesc || '') + '" placeholder="Required..." onclick="event.stopPropagation()" style="flex:1;font-size:12px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:white;outline:none;font-family:inherit;" />' +
+        '<input type="text" class="bulk-desc-input" data-id="' + e.id + '" value="' + esc(e.jiraDesc || '') + '" placeholder="Required..." onclick="event.stopPropagation()" style="flex:1;font-size:12px;padding:5px 12px;border-radius:99px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;outline:none;font-family:inherit;" />' +
       '</div>'
     : '') +
   '</div>';
