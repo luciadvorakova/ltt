@@ -419,12 +419,24 @@ input[type="color"] {
       </div>
       <div class="settings-label" style="margin-top:0.5rem;">Slack standup</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;position:relative;">
-        <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;">Paste your Slack Incoming Webhook URL below. <a href="https://api.slack.com/messaging/webhooks" target="_blank" style="color:rgba(160,200,255,0.8);">How to get one →</a></p>
+        <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;">Your standup channel (for display only).</p>
         <div style="display:flex;gap:8px;align-items:center;">
-          <input type="text" id="slack-channel-input" placeholder="https://hooks.slack.com/services/..." style="flex:1;padding:9px 16px;border-radius:99px;font-size:12px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
+          <input type="text" id="slack-channel-input" placeholder="#daily-standup" style="flex:1;padding:9px 16px;border-radius:99px;font-size:13px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
           <button onclick="saveSlackChannel()" class="btn primary" style="padding:9px 18px;font-size:13px;flex-shrink:0;">Save</button>
         </div>
         <span id="slack-channel-status" style="font-size:12px;color:rgba(255,255,255,0.55);min-height:16px;"></span>
+      </div>
+
+      <div class="settings-label">Proxy server</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;position:relative;">
+        <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;">Connect your Render.com proxy for direct Slack sending and secure Jira config.</p>
+        <input type="text" id="proxy-url-input" placeholder="https://ltt-proxy.onrender.com" style="padding:9px 16px;border-radius:99px;font-size:12px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
+        <input type="password" id="proxy-secret-input" placeholder="Your proxy secret key" style="padding:9px 16px;border-radius:99px;font-size:12px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
+        <div style="display:flex;gap:8px;">
+          <button onclick="saveProxySettings()" class="btn primary" style="padding:9px 18px;font-size:13px;">Save</button>
+          <button onclick="testProxy()" class="btn" style="padding:9px 18px;font-size:13px;">Test connection</button>
+        </div>
+        <span id="proxy-status" style="font-size:12px;color:rgba(255,255,255,0.55);min-height:16px;"></span>
       </div>
       <div class="settings-label">Background gradient</div>
       <div class="gradient-presets" id="gradient-presets"></div>
@@ -886,7 +898,7 @@ function renderHistory() {
         '<span class="history-day-label">' + dayLabel(day) + '</span>' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
           (hasUnsent ? '<button onclick="showBulkJiraModalForDay(\'' + day + '\')" style="padding:3px 11px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,255,180,0.95);background:rgba(160,255,180,0.1);border:1px solid rgba(160,255,180,0.28);white-space:nowrap;">↑ Send to Jira</button>' : '') +
-          (hasStandup ? '<button onclick="showSlackStandupModal(\'' + day + '\')" style="padding:3px 11px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,200,255,0.95);background:rgba(160,200,255,0.1);border:1px solid rgba(160,200,255,0.28);white-space:nowrap;">Standup</button>' : '') +
+          '<button onclick="showSlackStandupModal(\'' + day + '\')" style="padding:3px 11px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,200,255,0.95);background:rgba(160,200,255,0.1);border:1px solid rgba(160,200,255,0.28);white-space:nowrap;">Standup</button>' +
           '<span class="history-day-total">' + fmtTotal(total) + '</span>' +
         '</div>' +
       '</div>' +
@@ -905,7 +917,7 @@ function showTab(name) {
   });
   if (name === 'history') renderHistory();
   if (name === 'weekly') renderWeekly();
-  if (name === 'settings') { renderSettings(); loadSlackChannelSetting(); }
+  if (name === 'settings') { renderSettings(); loadSlackChannelSetting(); loadProxySettings(); }
 }
 
 
@@ -1054,7 +1066,17 @@ function loadBgImage() {
 }
 
 // ---- JIRA INTEGRATION (OAuth 2.0 PKCE) ----
-var JIRA_CLIENT_ID = 'dwD4aPYHdf9kXcnLDm3lqJhHIuJYoVUf';
+var JIRA_CLIENT_ID = '';
+var LTT_PROXY_URL = localStorage.getItem('ltt_proxy_url') || '';
+
+async function loadConfig() {
+  if (!LTT_PROXY_URL) return;
+  try {
+    var r = await fetch(LTT_PROXY_URL + '/config');
+    var data = await r.json();
+    if (data.jiraClientId) JIRA_CLIENT_ID = data.jiraClientId;
+  } catch(e) { console.warn('Could not load config from proxy:', e.message); }
+}
 var JIRA_REDIRECT_URI = 'https://luciadvorakova.github.io/ltt/';
 var JIRA_SCOPES = 'read:jira-work write:jira-work read:jira-user offline_access';
 var JIRA_SITE = 'digismoothie.atlassian.net';
@@ -2185,39 +2207,76 @@ function renderSettings() {
   if (el) el.innerHTML = swatchHtml;
 }
 
+function saveProxySettings() {
+  var url = (document.getElementById('proxy-url-input').value || '').trim().replace(/\/$/, '');
+  var secret = (document.getElementById('proxy-secret-input').value || '').trim();
+  var status = document.getElementById('proxy-status');
+  if (!url) { status.textContent = 'Please enter your proxy URL.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
+  if (!secret) { status.textContent = 'Please enter your proxy secret.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
+  localStorage.setItem('ltt_proxy_url', url);
+  localStorage.setItem('ltt_proxy_secret', secret);
+  LTT_PROXY_URL = url;
+  status.textContent = 'Saved! Use "Test connection" to verify.';
+  status.style.color = 'rgba(160,255,180,0.9)';
+  setTimeout(function() { status.textContent = ''; }, 3000);
+  loadConfig();
+}
+
+async function testProxy() {
+  var url = localStorage.getItem('ltt_proxy_url') || '';
+  var status = document.getElementById('proxy-status');
+  if (!url) { status.textContent = 'No proxy URL saved yet.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
+  status.textContent = 'Testing…'; status.style.color = 'rgba(255,255,255,0.55)';
+  try {
+    var r = await fetch(url + '/config');
+    var data = await r.json();
+    if (data.jiraClientId) {
+      JIRA_CLIENT_ID = data.jiraClientId;
+      status.textContent = '✓ Connected! Jira config loaded.';
+    } else {
+      status.textContent = '✓ Connected (no Jira config returned).';
+    }
+    status.style.color = 'rgba(160,255,180,0.9)';
+  } catch(e) {
+    status.textContent = '✗ Could not reach proxy. Check the URL.';
+    status.style.color = 'rgba(255,160,160,0.9)';
+  }
+}
+
+function loadProxySettings() {
+  var url = localStorage.getItem('ltt_proxy_url') || '';
+  var secret = localStorage.getItem('ltt_proxy_secret') || '';
+  var urlInput = document.getElementById('proxy-url-input');
+  var secretInput = document.getElementById('proxy-secret-input');
+  if (urlInput) urlInput.value = url;
+  if (secretInput) secretInput.value = secret;
+}
+
 // ---- SLACK STANDUP ----
 
 function saveSlackChannel() {
   var input = document.getElementById('slack-channel-input');
   var status = document.getElementById('slack-channel-status');
   var val = (input.value || '').trim();
-  if (!val || !val.startsWith('https://hooks.slack.com/')) {
-    status.textContent = 'Please enter a valid Slack webhook URL.';
-    status.style.color = 'rgba(255,160,160,0.9)';
-    return;
-  }
-  localStorage.setItem('slack_webhook', val);
-  status.textContent = 'Webhook saved!';
+  if (!val) { status.textContent = 'Please enter a channel name.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
+  if (!val.startsWith('#')) val = '#' + val;
+  localStorage.setItem('slack_channel', val);
+  input.value = val;
+  status.textContent = 'Saved!';
   status.style.color = 'rgba(160,255,180,0.9)';
   setTimeout(function() { status.textContent = ''; }, 2500);
   renderHistory();
 }
 
 function loadSlackChannelSetting() {
-  var ch = localStorage.getItem('slack_webhook') || '';
+  var ch = localStorage.getItem('slack_channel') || '';
   var input = document.getElementById('slack-channel-input');
   if (input) input.value = ch;
 }
 
 function showSlackStandupModal(day) {
-  var webhook = localStorage.getItem('slack_webhook') || '';
-  if (!webhook) {
-    if (confirm('No Slack webhook set yet. Go to Settings to add one?')) {
-      showTab('settings');
-      setTimeout(function() { document.getElementById('slack-channel-input').focus(); }, 100);
-    }
-    return;
-  }
+  var channel = localStorage.getItem('slack_channel') || '';
+  document.getElementById('slack-standup-channel').textContent = channel ? 'Copy & paste to ' + channel : 'Copy to clipboard';
 
   var entries = loadEntries();
   var todayKey = dayKey(Date.now());
@@ -2265,8 +2324,8 @@ function closeSlackStandupModal() {
 }
 
 async function sendSlackStandup() {
-  var webhookUrl = localStorage.getItem('slack_webhook');
-  if (!webhookUrl) { alert('Please set a Slack Webhook URL in Settings first.'); return; }
+  var proxyUrl = localStorage.getItem('ltt_proxy_url') || '';
+  var proxySecret = localStorage.getItem('ltt_proxy_secret') || '';
   var accomplished = (document.getElementById('slack-accomplished-input').value || '').trim();
   var workOn = (document.getElementById('slack-workon-input').value || '').trim();
   var status = document.getElementById('slack-send-status');
@@ -2278,27 +2337,43 @@ async function sendSlackStandup() {
     ':rotating_light: *Possible problems:*\n\n' +
     ':heads_down: *I would like to share:*';
 
+  // If no proxy configured, fall back to clipboard
+  if (!proxyUrl || !proxySecret) {
+    try { await navigator.clipboard.writeText(message); } catch(e) {
+      var ta = document.createElement('textarea');
+      ta.value = message; ta.style.cssText = 'position:fixed;opacity:0;';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    btn.textContent = '✓ Copied!';
+    status.textContent = 'Proxy not set up yet — message copied to clipboard instead.';
+    status.style.color = 'rgba(255,220,100,0.9)';
+    setTimeout(function() { btn.textContent = '📋 Copy / Send'; status.textContent = ''; closeSlackStandupModal(); }, 2500);
+    return;
+  }
+
   btn.disabled = true;
-  status.textContent = 'Sending…';
-  status.style.color = 'rgba(255,255,255,0.55)';
+  btn.textContent = 'Sending…';
+  status.textContent = '';
 
   try {
-    var response = await fetch(webhookUrl, {
+    var response = await fetch(proxyUrl + '/standup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: message })
+      headers: { 'Content-Type': 'application/json', 'X-Proxy-Secret': proxySecret },
+      body: JSON.stringify({ message: message })
     });
-    if (!response.ok && response.status !== 0) throw new Error('Webhook returned ' + response.status);
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Server error');
     status.textContent = '✓ Sent to Slack!';
     status.style.color = 'rgba(160,255,180,0.9)';
     btn.disabled = false;
+    btn.textContent = '📋 Copy / Send';
     setTimeout(closeSlackStandupModal, 1800);
-  } catch (err) {
-    // Slack webhooks return 200 with "ok" text — a network error may still mean success
-    // if we get a CORS/network error but no status, it may have gone through
-    status.textContent = '✗ ' + (err.message || 'Failed to send. Check webhook URL in Settings.');
+  } catch(err) {
+    status.textContent = '✗ ' + (err.message || 'Failed to send.');
     status.style.color = 'rgba(255,160,160,0.9)';
     btn.disabled = false;
+    btn.textContent = '📋 Copy / Send';
   }
 }
 
@@ -2307,6 +2382,8 @@ loadGradientSetting();
 loadTitle();
 loadBgImage();
 loadSlackChannelSetting();
+loadProxySettings();
+loadConfig();
 // Handle OAuth callback if returning from Atlassian
 if (window.location.search.includes('code=')) { handleOAuthCallback(); }
 renderToday();
@@ -2383,7 +2460,7 @@ renderToday();
     </div>
     <!-- Footer -->
     <div style="position:relative;z-index:2;padding:14px 22px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:flex-end;flex-shrink:0;">
-      <button onclick="sendSlackStandup()" id="slack-send-btn" class="btn primary" style="padding:10px 26px;">Send to Slack</button>
+      <button onclick="sendSlackStandup()" id="slack-send-btn" class="btn primary" style="padding:10px 26px;">📋 Copy / Send</button>
     </div>
   </div>
 </div>
