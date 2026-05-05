@@ -2234,11 +2234,19 @@ function showSlackStandupModal(day) {
   var todayEntries = entries.filter(function(e) { return dayKey(e.ts) === todayKey; });
 
   var accomplishedText = yesterdayEntries.map(function(e) {
-    return (e.jiraKey ? e.jiraKey + ' ' : '') + (e.jiraSummary || e.name);
+    var parts = [];
+    if (e.jiraKey) parts.push(e.jiraKey);
+    parts.push(e.jiraSummary || e.name);
+    if (e.jiraDesc) parts.push(e.jiraDesc);
+    return parts.join(' - ');
   }).join('\n');
 
   var workOnText = todayEntries.map(function(e) {
-    return (e.jiraKey ? e.jiraKey + ' ' : '') + (e.jiraSummary || e.name);
+    var parts = [];
+    if (e.jiraKey) parts.push(e.jiraKey);
+    parts.push(e.jiraSummary || e.name);
+    if (e.jiraDesc) parts.push(e.jiraDesc);
+    return parts.join(' - ');
   }).join('\n');
 
   document.getElementById('slack-standup-channel').textContent = 'Sending to ' + channel;
