@@ -1068,6 +1068,14 @@ function loadBgImage() {
 // ---- JIRA INTEGRATION (OAuth 2.0 PKCE) ----
 var JIRA_CLIENT_ID = '';
 var LTT_PROXY_URL = localStorage.getItem('ltt_proxy_url') || '';
+var _proxySecretMemory = ''; // never saved to localStorage — lives in memory only
+
+function getProxySecret() {
+  if (_proxySecretMemory) return _proxySecretMemory;
+  var secret = prompt('Enter your proxy secret to continue:');
+  if (secret) _proxySecretMemory = secret.trim();
+  return _proxySecretMemory;
+}
 
 async function loadConfig() {
   if (!LTT_PROXY_URL) return;
@@ -2214,9 +2222,12 @@ function saveProxySettings() {
   if (!url) { status.textContent = 'Please enter your proxy URL.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
   if (!secret) { status.textContent = 'Please enter your proxy secret.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
   localStorage.setItem('ltt_proxy_url', url);
-  localStorage.setItem('ltt_proxy_secret', secret);
+  // Store secret in memory only — not localStorage
+  _proxySecretMemory = secret;
   LTT_PROXY_URL = url;
-  status.textContent = 'Saved! Use "Test connection" to verify.';
+  // Clear the secret field so it's not sitting visible in the UI
+  document.getElementById('proxy-secret-input').value = '';
+  status.textContent = 'Saved! Secret is held in memory for this session.';
   status.style.color = 'rgba(160,255,180,0.9)';
   setTimeout(function() { status.textContent = ''; }, 3000);
   loadConfig();
@@ -2234,7 +2245,7 @@ async function testProxy() {
       JIRA_CLIENT_ID = data.jiraClientId;
       status.textContent = '✓ Connected! Jira config loaded.';
     } else {
-      status.textContent = '✓ Connected (no Jira config returned).';
+      status.textContent = '✓ Connected.';
     }
     status.style.color = 'rgba(160,255,180,0.9)';
   } catch(e) {
@@ -2245,11 +2256,9 @@ async function testProxy() {
 
 function loadProxySettings() {
   var url = localStorage.getItem('ltt_proxy_url') || '';
-  var secret = localStorage.getItem('ltt_proxy_secret') || '';
   var urlInput = document.getElementById('proxy-url-input');
-  var secretInput = document.getElementById('proxy-secret-input');
   if (urlInput) urlInput.value = url;
-  if (secretInput) secretInput.value = secret;
+  // Never pre-fill the secret field — it lives in memory only
 }
 
 // ---- SLACK STANDUP ----
@@ -2325,7 +2334,6 @@ function closeSlackStandupModal() {
 
 async function sendSlackStandup() {
   var proxyUrl = localStorage.getItem('ltt_proxy_url') || '';
-  var proxySecret = localStorage.getItem('ltt_proxy_secret') || '';
   var accomplished = (document.getElementById('slack-accomplished-input').value || '').trim();
   var workOn = (document.getElementById('slack-workon-input').value || '').trim();
   var status = document.getElementById('slack-send-status');
@@ -2338,7 +2346,7 @@ async function sendSlackStandup() {
     ':heads_down: *I would like to share:*';
 
   // If no proxy configured, fall back to clipboard
-  if (!proxyUrl || !proxySecret) {
+  if (!proxyUrl) {
     try { await navigator.clipboard.writeText(message); } catch(e) {
       var ta = document.createElement('textarea');
       ta.value = message; ta.style.cssText = 'position:fixed;opacity:0;';
@@ -2352,6 +2360,9 @@ async function sendSlackStandup() {
     return;
   }
 
+  var secret = getProxySecret();
+  if (!secret) { status.textContent = 'Secret is required to send.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
+
   btn.disabled = true;
   btn.textContent = 'Sending…';
   status.textContent = '';
@@ -2359,7 +2370,7 @@ async function sendSlackStandup() {
   try {
     var response = await fetch(proxyUrl + '/standup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Proxy-Secret': proxySecret },
+      headers: { 'Content-Type': 'application/json', 'X-Proxy-Secret': secret },
       body: JSON.stringify({ message: message })
     });
     var data = await response.json();
@@ -2370,6 +2381,8 @@ async function sendSlackStandup() {
     btn.textContent = '📋 Copy / Send';
     setTimeout(closeSlackStandupModal, 1800);
   } catch(err) {
+    // Wrong secret — clear memory so user can re-enter
+    if (err.message === 'Unauthorized') _proxySecretMemory = '';
     status.textContent = '✗ ' + (err.message || 'Failed to send.');
     status.style.color = 'rgba(255,160,160,0.9)';
     btn.disabled = false;
@@ -2384,6 +2397,8 @@ loadBgImage();
 loadSlackChannelSetting();
 loadProxySettings();
 loadConfig();
+// Remove old proxy secret from localStorage if it was saved by a previous version
+localStorage.removeItem('ltt_proxy_secret');
 // Handle OAuth callback if returning from Atlassian
 if (window.location.search.includes('code=')) { handleOAuthCallback(); }
 renderToday();
