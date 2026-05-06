@@ -374,7 +374,7 @@ input[type="color"] {
       <span class="label">Total today</span>
       <div style="display:flex;align-items:center;gap:10px;">
         <button onclick="showBulkJiraModal()" id="bulk-jira-btn" style="display:none;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,255,180,0.95);background:rgba(160,255,180,0.1);border:1px solid rgba(160,255,180,0.28);white-space:nowrap;">↑ Send to Jira</button>
-        <button onclick="showSlackStandupModal()" id="standup-btn" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,200,255,0.95);background:rgba(160,200,255,0.1);border:1px solid rgba(160,200,255,0.28);white-space:nowrap;">Standup</button>
+        <button onclick="showSlackStandupModal()" id="standup-btn" style="display:none;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(160,200,255,0.95);background:rgba(160,200,255,0.1);border:1px solid rgba(160,200,255,0.28);white-space:nowrap;">Standup</button>
         <span class="val" id="today-total">0h 00m</span>
       </div>
     </div>
@@ -424,7 +424,12 @@ input[type="color"] {
           <input type="text" id="slack-channel-input" placeholder="#daily-standup" style="flex:1;padding:9px 16px;border-radius:99px;font-size:13px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
           <button onclick="saveSlackChannel()" class="btn primary" style="padding:9px 18px;font-size:13px;flex-shrink:0;">Save</button>
         </div>
-        <span id="slack-channel-status" style="font-size:12px;color:rgba(255,255,255,0.55);min-height:16px;"></span>
+        <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;margin-top:4px;">Your Slack member ID — so standup links to your profile. In Slack: click your avatar → Profile → ··· → Copy member ID.</p>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="slack-user-id-input" placeholder="e.g. U0123456789" style="flex:1;padding:9px 16px;border-radius:99px;font-size:13px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
+          <button onclick="saveSlackUserId()" class="btn primary" style="padding:9px 18px;font-size:13px;flex-shrink:0;">Save</button>
+        </div>
+        <span id="slack-userid-status" style="font-size:12px;color:rgba(255,255,255,0.55);min-height:16px;"></span>
       </div>
 
       <div class="settings-label">Proxy server</div>
@@ -819,6 +824,8 @@ function renderToday() {
   const todayEntries = entries.filter(e => dayKey(e.ts) === todayKey).sort((a,b) => { if (a.sortOrder !== undefined && b.sortOrder !== undefined) return a.sortOrder - b.sortOrder; return b.id - a.id; });
   const totalMs = todayEntries.reduce((sum, e) => sum + (e.ms||0), 0);
   document.getElementById('today-total').textContent = fmtTotal(totalMs);
+  var standupBtn = document.getElementById('standup-btn');
+  if (standupBtn) standupBtn.style.display = todayEntries.length > 0 ? 'inline-block' : 'none';
 
   const el = document.getElementById('today-entries');
   if (todayEntries.length === 0) {
@@ -2277,10 +2284,23 @@ function saveSlackChannel() {
   renderHistory();
 }
 
+function saveSlackUserId() {
+  var val = (document.getElementById('slack-user-id-input').value || '').trim();
+  var status = document.getElementById('slack-userid-status');
+  if (!val) { status.textContent = 'Please enter your Slack member ID.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
+  localStorage.setItem('slack_user_id', val);
+  status.textContent = '✓ Saved!';
+  status.style.color = 'rgba(160,255,180,0.9)';
+  setTimeout(function() { status.textContent = ''; }, 2500);
+}
+
 function loadSlackChannelSetting() {
   var ch = localStorage.getItem('slack_channel') || '';
+  var uid = localStorage.getItem('slack_user_id') || '';
   var input = document.getElementById('slack-channel-input');
+  var uidInput = document.getElementById('slack-user-id-input');
   if (input) input.value = ch;
+  if (uidInput) uidInput.value = uid;
 }
 
 function showSlackStandupModal(day) {
@@ -2339,11 +2359,13 @@ async function sendSlackStandup() {
   var status = document.getElementById('slack-send-status');
   var btn = document.getElementById('slack-send-btn');
 
-  var message = ':boom: submission from @Lucia\n\n' +
+  var slackUserId = localStorage.getItem('slack_user_id') || '';
+  var userName = slackUserId ? '<@' + slackUserId + '>' : (localStorage.getItem('slack_display_name') || 'Lucia');
+  var message = ':boom: submission from ' + userName + '\n\n' +
     ':rocket: *I accomplished:*\n' + (accomplished || '—') + '\n\n' +
     ':soon: *I will work on:*\n' + (workOn || '—') + '\n\n' +
     ':rotating_light: *Possible problems:*\n\n' +
-    ':heads_down: *I would like to share:*';
+    ':heads-down: *I would like to share:*';
 
   // If no proxy configured, fall back to clipboard
   if (!proxyUrl) {
@@ -2475,7 +2497,7 @@ renderToday();
     </div>
     <!-- Footer -->
     <div style="position:relative;z-index:2;padding:14px 22px;border-top:1px solid rgba(255,255,255,0.1);display:flex;justify-content:flex-end;flex-shrink:0;">
-      <button onclick="sendSlackStandup()" id="slack-send-btn" class="btn primary" style="padding:10px 26px;">📋 Copy / Send</button>
+      <button onclick="sendSlackStandup()" id="slack-send-btn" class="btn primary" style="padding:10px 26px;">Send to Slack</button>
     </div>
   </div>
 </div>
