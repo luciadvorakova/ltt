@@ -489,6 +489,7 @@ function loadEntries() {
     const all = JSON.parse(raw);
     if (!Array.isArray(all)) return [];
     const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+    const todayKey = dayKey(Date.now());
     return all
       .filter(e => e && e.id !== undefined && e.name !== undefined)
       .map(e => ({
@@ -502,9 +503,21 @@ function loadEntries() {
         jiraKey: e.jiraKey || null,
         jiraSummary: e.jiraSummary || null,
         jiraDesc: e.jiraDesc || '',
-        jiraSent: !!e.jiraSent
+        jiraSent: !!e.jiraSent,
+        clientName: e.clientName || null,
+        deletedFromBulk: !!e.deletedFromBulk,
+        carriedOver: !!e.carriedOver
       }))
-      .filter(e => !isNaN(e.id) && (e.untracked || (e.ts > cutoff && !isNaN(e.ts))));
+      .filter(e => {
+        if (!e.id || isNaN(e.id)) return false;
+        if (e.deletedFromBulk) return false;
+        // Keep today's entries always
+        if (dayKey(e.ts) === todayKey) return true;
+        // Carry forward zero-time untracked tasks to today (not yet sent to Jira)
+        if (e.ms === 0 && !e.jiraSent && e.untracked) return true;
+        // Normal 30-day retention for tracked entries
+        return e.ts > cutoff && !isNaN(e.ts);
+      });
   } catch(err) { return []; }
 }
 
@@ -821,19 +834,22 @@ function deleteEntry(id) {
 function renderToday() {
   const entries = loadEntries();
   const todayKey = dayKey(Date.now());
+  // Today's entries + zero-time untracked from previous days (carried over)
   const todayEntries = entries.filter(e => dayKey(e.ts) === todayKey).sort((a,b) => { if (a.sortOrder !== undefined && b.sortOrder !== undefined) return a.sortOrder - b.sortOrder; return b.id - a.id; });
+  const carriedEntries = entries.filter(e => dayKey(e.ts) !== todayKey && e.ms === 0 && !e.jiraSent && e.untracked);
+  const allDisplayed = [...todayEntries, ...carriedEntries];
   const totalMs = todayEntries.reduce((sum, e) => sum + (e.ms||0), 0);
   document.getElementById('today-total').textContent = fmtTotal(totalMs);
   var standupBtn = document.getElementById('standup-btn');
-  if (standupBtn) standupBtn.style.display = todayEntries.length > 0 ? 'inline-block' : 'none';
+  if (standupBtn) standupBtn.style.display = allDisplayed.length > 0 ? 'inline-block' : 'none';
 
   const el = document.getElementById('today-entries');
-  if (todayEntries.length === 0) {
+  if (allDisplayed.length === 0) {
     el.innerHTML = '<div class="empty">Add a task above to get started</div>';
     return;
   }
 
-  el.innerHTML = todayEntries.map(function(e) {
+  el.innerHTML = allDisplayed.map(function(e) {
     const dark = isDarkMode();
     const cardBg = 'transparent';
     const cardBorder = 'rgba(255,255,255,0.16)';
@@ -2023,6 +2039,7 @@ function bulkEntryHTML(e) {
       '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:99px;padding:1px 8px;flex-shrink:0;">' + esc(e.jiraKey) + '</span>' +
       '<span style="font-size:13px;font-weight:500;color:white;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(e.jiraSummary || e.name) + '</span>' +
       '<span style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);flex-shrink:0;">' + mins + 'm</span>' +
+      '<button onclick="event.stopPropagation();deleteBulkEntry(' + e.id + ')" title="Delete permanently" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.3);font-size:16px;padding:0 4px;line-height:1;flex-shrink:0;" onmouseover="this.style.color=\'rgba(255,100,100,0.8)\'" onmouseout="this.style.color=\'rgba(255,255,255,0.3)\'">&#8943;</button>' +
     '</div>' +
     (checked ?
       '<div style="display:flex;align-items:center;gap:8px;padding-left:28px;" onclick="event.stopPropagation()">' +
@@ -2054,6 +2071,22 @@ function toggleBulkEntry(id) {
     if (_bulkDescCache[id] !== undefined) entry.jiraDesc = _bulkDescCache[id];
     row.outerHTML = bulkEntryHTML(entry);
   }
+  updateBulkCount();
+}
+
+function deleteBulkEntry(id) {
+  if (!confirm('Permanently delete this worklog? This cannot be undone.')) return;
+  var entries = loadEntries();
+  var idx = entries.findIndex(function(e) { return e.id === id; });
+  if (idx === -1) return;
+  // Mark as deleted so it won't reappear
+  entries[idx].deletedFromBulk = true;
+  saveEntries(entries);
+  // Remove from bulk selected
+  delete _bulkSelected[id];
+  // Remove row from UI
+  var row = document.getElementById('bulk-row-' + id);
+  if (row) row.remove();
   updateBulkCount();
 }
 
@@ -2453,6 +2486,24 @@ async function sendSlackStandup() {
   }
 }
 
+function autoCleanSentEntries() {
+  var entries = loadEntries();
+  var todayKey = dayKey(Date.now());
+  var changed = false;
+  var cleaned = entries.filter(function(e) {
+    if (e.jiraSent && dayKey(e.ts) !== todayKey) { changed = true; return false; }
+    return true;
+  });
+  if (changed) saveEntries(cleaned);
+}
+
+(function scheduleMidnightCleanup() {
+  var now = new Date();
+  var midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+  setTimeout(function() { autoCleanSentEntries(); renderToday(); renderHistory(); scheduleMidnightCleanup(); }, midnight - now);
+})();
+
+autoCleanSentEntries();
 resetTimer(false);
 loadGradientSetting();
 loadTitle();
