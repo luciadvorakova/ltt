@@ -1748,37 +1748,37 @@ function confirmJiraIssue(key, summary) {
 
 async function fetchClientName(key, entryId) {
   try {
-    // Step 1: get the issue to find its parent
     var issueResp = await jiraFetch('/rest/api/3/issue/' + key + '?fields=parent,customfield_10014');
     var issue = await issueResp.json();
-    // Find parent key — could be in parent field or epic link field
+    console.log('[LTT] Issue data for', key, ':', JSON.stringify(issue.fields));
+
     var parentKey = null;
     if (issue.fields && issue.fields.parent && issue.fields.parent.key) {
       parentKey = issue.fields.parent.key;
     } else if (issue.fields && issue.fields.customfield_10014) {
       parentKey = issue.fields.customfield_10014;
     }
+    console.log('[LTT] Parent key:', parentKey);
     if (!parentKey) return;
 
-    // Step 2: get the parent (epic) with all fields to find Client name
-    var epicResp = await jiraFetch('/rest/api/3/issue/' + parentKey + '?expand=names');
+    var epicResp = await jiraFetch('/rest/api/3/issue/' + parentKey);
     var epic = await epicResp.json();
-    if (!epic.fields) return;
+    console.log('[LTT] Epic fields keys:', Object.keys(epic.fields || {}));
 
-    // Step 3: find the field named "Client name" by matching field names
     var namesResp = await jiraFetch('/rest/api/3/field');
     var fields = await namesResp.json();
     var clientField = fields.find(function(f) {
       return f.name && f.name.toLowerCase() === 'client name';
     });
+    console.log('[LTT] Client name field:', clientField ? clientField.id : 'NOT FOUND');
     if (!clientField) return;
 
     var clientName = epic.fields[clientField.id];
-    if (!clientName || (typeof clientName === 'object' && !clientName.value)) return;
+    console.log('[LTT] Client name value:', clientName);
+    if (!clientName) return;
     var clientNameStr = typeof clientName === 'object' ? (clientName.value || clientName.name || '') : String(clientName);
     if (!clientNameStr.trim()) return;
 
-    // Step 4: save client name to the entry
     var entries = loadEntries();
     var idx = entries.findIndex(function(e) { return e.id === entryId; });
     if (idx > -1) {
@@ -1787,8 +1787,7 @@ async function fetchClientName(key, entryId) {
       renderToday();
     }
   } catch(e) {
-    // Silently fail — client name is optional
-    console.log('fetchClientName failed:', e.message);
+    console.log('[LTT] fetchClientName error:', e.message, e);
   }
 }
 
