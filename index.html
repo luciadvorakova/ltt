@@ -1776,7 +1776,14 @@ async function fetchClientName(key, entryId) {
     var clientName = epic.fields[clientField.id];
     console.log('[LTT] Client name value:', clientName);
     if (!clientName) return;
-    var clientNameStr = typeof clientName === 'object' ? (clientName.value || clientName.name || '') : String(clientName);
+    var clientNameStr;
+    if (Array.isArray(clientName)) {
+      clientNameStr = clientName[0] || '';
+    } else if (typeof clientName === 'object') {
+      clientNameStr = clientName.value || clientName.name || '';
+    } else {
+      clientNameStr = String(clientName);
+    }
     if (!clientNameStr.trim()) return;
 
     var entries = loadEntries();
