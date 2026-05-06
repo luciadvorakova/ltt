@@ -852,7 +852,7 @@ function renderToday() {
     return '<div class="entry-card" draggable="true" data-id="' + e.id + '">' +
       '<span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>' +
       '<div class="entry-info">' +
-        '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' + esc(e.jiraSummary || e.name) : esc(e.name))  + '</div>' +
+        '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' : '') + (e.clientName ? '<span style="font-size:10px;font-weight:700;padding:1px 8px;border-radius:99px;background:rgba(255,200,100,0.15);border:1px solid rgba(255,200,100,0.3);color:rgba(255,200,100,0.9);margin-right:6px;flex-shrink:0;">' + esc(e.clientName) + '</span>' : '') + esc(e.jiraSummary || e.name) + '</div>' +
         (e.jiraKey && !e.jiraSent ? '<div class="entry-desc" onclick="editJiraDescInline(' + e.id + ')">' + (e.jiraDesc ? esc(e.jiraDesc) : '<span style="opacity:0.4">Add description...</span>') + '</div>' : '') +
         (e.jiraKey && e.jiraSent ? '<div class="entry-desc" style="opacity:0.5;">' + (e.jiraDesc ? esc(e.jiraDesc) : '') + ' <span style="color:rgba(160,255,180,0.8)">✓ Sent</span></div>' : '') +
       '</div>' +
@@ -1719,14 +1719,61 @@ function confirmJiraIssue(key, summary) {
   var todayCount = entries.filter(function(e) { return dayKey(e.ts || Date.now()) === todayKey; }).length;
   var colorIdx = todayCount % PASTEL_COLORS.length;
   var id = Date.now();
-  entries.push({ id: id, name: summary, ms: 0, ts: Date.now(), colorIdx: colorIdx, untracked: true, jiraKey: key, jiraSummary: summary, jiraDesc: desc, jiraSent: false });
+  entries.push({ id: id, name: summary, ms: 0, ts: Date.now(), colorIdx: colorIdx, untracked: true, jiraKey: key, jiraSummary: summary, jiraDesc: desc, jiraSent: false, clientName: null });
   saveEntries(entries);
-  // Reset search but stay in Jira mode
   var searchInput = document.getElementById('jira-search-input');
   if (searchInput) { searchInput.value = ''; }
   var searchResults = document.getElementById('jira-search-results');
   if (searchResults) { searchResults.innerHTML = ''; searchResults.style.display = 'none'; }
   renderToday();
+  // Fetch parent epic's Client name in background
+  fetchClientName(key, id);
+}
+
+async function fetchClientName(key, entryId) {
+  try {
+    // Step 1: get the issue to find its parent
+    var issueResp = await jiraFetch('/rest/api/3/issue/' + key + '?fields=parent,customfield_10014');
+    var issue = await issueResp.json();
+    // Find parent key — could be in parent field or epic link field
+    var parentKey = null;
+    if (issue.fields && issue.fields.parent && issue.fields.parent.key) {
+      parentKey = issue.fields.parent.key;
+    } else if (issue.fields && issue.fields.customfield_10014) {
+      parentKey = issue.fields.customfield_10014;
+    }
+    if (!parentKey) return;
+
+    // Step 2: get the parent (epic) with all fields to find Client name
+    var epicResp = await jiraFetch('/rest/api/3/issue/' + parentKey + '?expand=names');
+    var epic = await epicResp.json();
+    if (!epic.fields) return;
+
+    // Step 3: find the field named "Client name" by matching field names
+    var namesResp = await jiraFetch('/rest/api/3/field');
+    var fields = await namesResp.json();
+    var clientField = fields.find(function(f) {
+      return f.name && f.name.toLowerCase() === 'client name';
+    });
+    if (!clientField) return;
+
+    var clientName = epic.fields[clientField.id];
+    if (!clientName || (typeof clientName === 'object' && !clientName.value)) return;
+    var clientNameStr = typeof clientName === 'object' ? (clientName.value || clientName.name || '') : String(clientName);
+    if (!clientNameStr.trim()) return;
+
+    // Step 4: save client name to the entry
+    var entries = loadEntries();
+    var idx = entries.findIndex(function(e) { return e.id === entryId; });
+    if (idx > -1) {
+      entries[idx].clientName = clientNameStr.trim();
+      saveEntries(entries);
+      renderToday();
+    }
+  } catch(e) {
+    // Silently fail — client name is optional
+    console.log('fetchClientName failed:', e.message);
+  }
 }
 
 // Helper: get YYYY-MM-DD in local time from timestamp
@@ -2325,19 +2372,13 @@ function showSlackStandupModal(day) {
   var todayEntries = entries.filter(function(e) { return dayKey(e.ts) === todayKey; });
 
   var accomplishedText = yesterdayEntries.map(function(e) {
-    var parts = [];
-    if (e.jiraKey) parts.push(e.jiraKey);
-    parts.push(e.jiraSummary || e.name);
-    if (e.jiraDesc) parts.push(e.jiraDesc);
-    return parts.join(' - ');
+    var desc = e.jiraDesc || e.jiraSummary || e.name;
+    return e.clientName ? e.clientName + ' - ' + desc : desc;
   }).join('\n');
 
   var workOnText = todayEntries.map(function(e) {
-    var parts = [];
-    if (e.jiraKey) parts.push(e.jiraKey);
-    parts.push(e.jiraSummary || e.name);
-    if (e.jiraDesc) parts.push(e.jiraDesc);
-    return parts.join(' - ');
+    var desc = e.jiraDesc || e.jiraSummary || e.name;
+    return e.clientName ? e.clientName + ' - ' + desc : desc;
   }).join('\n');
 
   document.getElementById('slack-standup-channel').textContent = 'Webhook configured ✓';
