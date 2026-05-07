@@ -868,7 +868,7 @@ function renderToday() {
     return '<div class="entry-card" draggable="true" data-id="' + e.id + '">' +
       '<span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>' +
       '<div class="entry-info">' +
-        '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' : '') + (e.clientName ? '<span style="font-size:10px;font-weight:700;padding:1px 8px;border-radius:99px;background:rgba(255,200,100,0.15);border:1px solid rgba(255,200,100,0.3);color:rgba(255,200,100,0.9);margin-right:6px;flex-shrink:0;">' + esc(e.clientName) + '</span>' : '') + esc(e.jiraSummary || e.name) + '</div>' +
+        '<div class="entry-name">' + (e.clientName ? '<span style="font-size:10px;font-weight:700;padding:1px 8px;border-radius:99px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.7);margin-right:6px;flex-shrink:0;">' + esc(e.clientName) + '</span>' : '') + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' : '') + esc(e.jiraSummary || e.name) + '</div>' +
         (e.jiraKey && !e.jiraSent ? '<div class="entry-desc" onclick="editJiraDescInline(' + e.id + ')">' + (e.jiraDesc ? esc(e.jiraDesc) : '<span style="opacity:0.4">Add description...</span>') + '</div>' : '') +
         (e.jiraKey && e.jiraSent ? '<div class="entry-desc" style="opacity:0.5;">' + (e.jiraDesc ? esc(e.jiraDesc) : '') + ' <span style="color:rgba(160,255,180,0.8)">✓ Sent</span></div>' : '') +
       '</div>' +
@@ -908,7 +908,7 @@ function renderHistory() {
     const cardText = 'rgba(255,255,255,1)';
       return '<div class="entry-card" data-id="' + e.id + '">' +
         '<div class="entry-info">' +
-          '<div class="entry-name">' + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' : '') + esc(e.jiraSummary || e.name) + (e.jiraSent ? ' <span style="font-size:10px;color:rgba(160,255,180,0.7);font-weight:600;">✓</span>' : '') + '</div>' +
+          '<div class="entry-name">' + (e.clientName ? '<span style="font-size:10px;font-weight:700;padding:1px 8px;border-radius:99px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.7);margin-right:6px;flex-shrink:0;">' + esc(e.clientName) + '</span>' : '') + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' : '') + esc(e.jiraSummary || e.name) + (e.jiraSent ? ' <span style="font-size:10px;color:rgba(160,255,180,0.7);font-weight:600;">✓</span>' : '') + '</div>' +
           (e.jiraDesc ? '<div class="entry-meta" style="margin-top:1px;">' + esc(e.jiraDesc) + '</div>' : '') +
         '</div>' +
         '<div class="entry-actions">' +
