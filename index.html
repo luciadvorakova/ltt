@@ -428,10 +428,6 @@ input[type="color"] {
         </div>
         <div id="jira-disconnected-view" style="display:flex;flex-direction:column;gap:8px;">
           <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;">Connect your Atlassian account to search Jira issues and log time directly from LTT.</p>
-          <div style="display:flex;flex-direction:column;gap:5px;">
-            <label style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:500;">App secret <span style="font-weight:400;opacity:0.7;">(Developer Console → Settings)</span></label>
-            <input type="password" id="jira-secret" placeholder="Paste your app secret..." style="padding:9px 16px;border-radius:99px;font-size:13px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
-          </div>
           <button onclick="connectJira()" class="btn primary" style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;align-self:flex-start;">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5C4.41 1.5 1.5 4.41 1.5 8S4.41 14.5 8 14.5 14.5 11.59 14.5 8 11.59 1.5 8 1.5zm3.5 8.75h-2.25V12.5h-2.5v-2.25H4.5v-2.5h2.25V5.5h2.5v2.25H11.5v2.5z" fill="#2a0a50"/></svg>
             Connect to Jira
@@ -613,7 +609,7 @@ async function _migrateFromLocalStorage() {
   }
   const settingsKeys = ['ltt_gradient','ltt_proxy_url','slack_channel','slack_user_id','ltt_noise',
     'jira_access_token','jira_refresh_token','jira_token_expiry','jira_cloud_id',
-    'jira_site_name','jira_user_name','jira_user_email','jira_account_id','jira_client_secret'];
+    'jira_site_name','jira_user_name','jira_user_email','jira_account_id'];
   let migrated = false;
   settingsKeys.forEach(k => {
     const v = localStorage.getItem(k);
@@ -647,9 +643,11 @@ function _initApp() {
     var noiseVal = getSetting('ltt_noise') !== null ? parseFloat(getSetting('ltt_noise')) / 100 : 0.08;
     overlay.style.opacity = noiseVal.toFixed(2);
   }
-  loadConfig();
   localStorage.removeItem('ltt_proxy_secret');
-  if (window.location.search.includes('code=')) { handleOAuthCallback(); }
+  // Load proxy config first so JIRA_CLIENT_SECRET is available for the OAuth callback
+  loadConfig().then(function() {
+    if (window.location.search.includes('code=')) handleOAuthCallback();
+  });
   renderToday();
 }
 
@@ -1334,6 +1332,7 @@ function loadBgImage() {
 
 // ---- JIRA INTEGRATION (OAuth 2.0 PKCE) ----
 var JIRA_CLIENT_ID = '';
+var JIRA_CLIENT_SECRET = ''; // fetched from proxy /config — never stored client-side
 var LTT_PROXY_URL = '';
 var _proxySecretMemory = ''; // never saved to localStorage — lives in memory only
 
@@ -1350,6 +1349,7 @@ async function loadConfig() {
     var r = await fetch(LTT_PROXY_URL + '/config');
     var data = await r.json();
     if (data.jiraClientId) JIRA_CLIENT_ID = data.jiraClientId;
+    if (data.jiraClientSecret) JIRA_CLIENT_SECRET = data.jiraClientSecret;
   } catch(e) { console.warn('Could not load config from proxy:', e.message); }
 }
 var JIRA_REDIRECT_URI = 'https://luciadvorakova.github.io/ltt/';
@@ -1374,14 +1374,16 @@ async function generateCodeChallenge(verifier) {
 }
 
 async function connectJira() {
-  var secretEl = document.getElementById('jira-secret');
-  var secret = secretEl ? secretEl.value.trim() : '';
-  if (!secret) {
-    var st = document.getElementById('jira-status');
-    if (st) { st.textContent = 'Please enter your app secret first.'; st.style.color = 'rgba(255,160,160,0.9)'; }
+  var st = document.getElementById('jira-status');
+  if (!LTT_PROXY_URL) {
+    if (st) { st.textContent = 'Please configure a proxy server first.'; st.style.color = 'rgba(255,160,160,0.9)'; }
     return;
   }
-  localStorage.setItem('jira_client_secret', secret);
+  if (!JIRA_CLIENT_SECRET) await loadConfig();
+  if (!JIRA_CLIENT_SECRET) {
+    if (st) { st.textContent = 'Could not load app secret from proxy. Check your proxy URL.'; st.style.color = 'rgba(255,160,160,0.9)'; }
+    return;
+  }
   var verifier = await generateCodeVerifier();
   var challenge = await generateCodeChallenge(verifier);
   localStorage.setItem('jira_pkce_verifier', verifier);
@@ -1412,14 +1414,13 @@ async function handleOAuthCallback() {
   var status = document.getElementById('jira-status');
   if (status) { status.textContent = 'Connecting to Jira...'; status.style.color = 'rgba(255,255,255,0.55)'; }
   try {
-    var clientSecret = localStorage.getItem('jira_client_secret') || '';
     var resp = await fetch('https://auth.atlassian.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         grant_type: 'authorization_code',
         client_id: JIRA_CLIENT_ID,
-        client_secret: clientSecret,
+        client_secret: JIRA_CLIENT_SECRET,
         code: code,
         redirect_uri: JIRA_REDIRECT_URI,
         code_verifier: verifier
@@ -1458,7 +1459,7 @@ async function refreshJiraToken() {
       body: JSON.stringify({
         grant_type: 'refresh_token',
         client_id: JIRA_CLIENT_ID,
-        client_secret: localStorage.getItem('jira_client_secret') || '',
+        client_secret: JIRA_CLIENT_SECRET,
         refresh_token: refresh
       })
     });
@@ -1509,7 +1510,7 @@ function isJiraConnected() {
 
 function disconnectJira() {
   ['jira_access_token','jira_refresh_token','jira_token_expiry','jira_cloud_id','jira_site_name','jira_user_name','jira_user_email','jira_account_id'].forEach(function(k) { removeSetting(k); });
-  ['jira_pkce_verifier','jira_oauth_state','jira_client_secret'].forEach(function(k) { localStorage.removeItem(k); });
+  ['jira_pkce_verifier','jira_oauth_state'].forEach(function(k) { localStorage.removeItem(k); });
   updateJiraUI();
 }
 
@@ -1528,9 +1529,6 @@ function updateJiraUI() {
 }
 
 function loadJiraCredentials() {
-  var secret = localStorage.getItem('jira_client_secret');
-  var secretEl = document.getElementById('jira-secret');
-  if (secret && secretEl) secretEl.value = secret;
   updateJiraUI();
 }
 
