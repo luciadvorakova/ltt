@@ -478,7 +478,14 @@ input[type="color"] {
 // ---- SUPABASE ----
 const SUPABASE_URL = 'https://rzjbfqgkprozguyjrxbp.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6amJmcWdrcHJvemd1eWpyeGJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTU0OTIsImV4cCI6MjA5MzgzMTQ5Mn0.PN4vN-_MQkYSGqsKaVT1XFK27BVDW0dnlX9BXXcGhVQ';
-const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    detectSessionInUrl: true,
+    autoRefreshToken: true,
+    storageKey: 'ltt-auth-v1',
+  }
+});
 let _currentUser = null;
 let _entries = [];      // in-memory cache; source of truth for all entry reads
 let _settings = {};     // in-memory settings; synced to Supabase user_settings
@@ -576,7 +583,7 @@ async function signOut() {
 async function _loadUserData() {
   const { data: rows } = await _sb.from('time_entries').select('*');
   _entries = (rows || []).map(_dbToEntry);
-  const { data: settRow } = await _sb.from('user_settings').select('settings').single();
+  const { data: settRow } = await _sb.from('user_settings').select('settings').maybeSingle();
   _settings = (settRow && settRow.settings) ? settRow.settings : {};
   await _migrateFromLocalStorage();
 }
@@ -668,14 +675,23 @@ async function _handleAuthSession(session) {
 }
 
 // Primary bootstrap: explicitly read the persisted session on every page load.
-// onAuthStateChange alone is unreliable for restoring sessions across refreshes
-// because it fires asynchronously and any thrown error silently prevents _showApp().
-_sb.auth.getSession().then(function({ data: { session } }) {
-  _handleAuthSession(session);
-});
+// Using getSession() rather than relying solely on onAuthStateChange because
+// onAuthStateChange fires async and a rejected internal promise silently swallows the session.
+_sb.auth.getSession()
+  .then(function(result) {
+    var session = result && result.data && result.data.session;
+    _handleAuthSession(session);
+  })
+  .catch(function(e) {
+    // Supabase can throw a JWT decode error (TypeError: reading 'payload') if the
+    // stored session token is malformed. Clear it and let the user sign in fresh.
+    console.error('[LTT] getSession failed, clearing stored session:', e);
+    try { localStorage.removeItem('ltt-auth-v1'); } catch(_) {}
+    _showAuthOverlay();
+  });
 
-// React to explicit auth events only (sign-in after OAuth redirect, sign-out).
-// TOKEN_REFRESHED and INITIAL_SESSION are intentionally ignored here.
+// React to explicit auth events (sign-in after OAuth redirect, sign-out).
+// INITIAL_SESSION and TOKEN_REFRESHED are handled by getSession() above.
 _sb.auth.onAuthStateChange(function(event, session) {
   if (event === 'SIGNED_IN') _handleAuthSession(session);
   else if (event === 'SIGNED_OUT') { _currentUser = null; _showAuthOverlay(); }
