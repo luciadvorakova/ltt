@@ -34,6 +34,10 @@ create policy "Users see and manage only their own entries"
 
 create index if not exists time_entries_user_ts on public.time_entries (user_id, ts desc);
 
+-- Grant table-level access to the authenticated role (required even with RLS)
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.time_entries to authenticated;
+
 
 -- 2. USER SETTINGS TABLE
 -- All settings stored as a single JSONB blob per user for flexibility.
@@ -56,6 +60,9 @@ create policy "Users see and manage only their own settings"
   for all
   using  (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Grant table-level access to the authenticated role
+grant select, insert, update, delete on public.user_settings to authenticated;
 
 
 -- 3. AUTO-UPDATE updated_at TRIGGER
