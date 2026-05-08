@@ -536,16 +536,37 @@ function _dbToEntry(row) {
 // Auth functions
 async function signInWithGoogle() {
   const errEl = document.getElementById('auth-error');
-  if (errEl) errEl.textContent = '';
+  const btn = document.querySelector('#auth-overlay button');
+  if (errEl) errEl.textContent = 'Connecting…';
+  if (btn) btn.disabled = true;
   try {
-    const { error } = await _sb.auth.signInWithOAuth({
+    console.log('[LTT] signInWithGoogle called, _sb:', !!_sb);
+    const { data, error } = await _sb.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.href, queryParams: { hd: 'digismoothie.com' } }
+      options: { redirectTo: window.location.origin + window.location.pathname }
     });
-    if (error && errEl) errEl.textContent = error.message;
+    console.log('[LTT] signInWithOAuth result:', { data, error });
+    if (error) {
+      if (errEl) errEl.textContent = 'Error: ' + error.message;
+      if (btn) btn.disabled = false;
+    }
+    // If no error, browser will redirect — disable button stays to prevent double-click
   } catch(e) {
-    if (errEl) errEl.textContent = 'Sign-in failed: ' + (e.message || e);
-    console.error('signInWithGoogle error:', e);
+    if (errEl) errEl.textContent = 'Error: ' + (e.message || String(e));
+    if (btn) btn.disabled = false;
+    console.error('[LTT] signInWithGoogle error:', e);
+  }
+}
+
+function _checkUrlHashError() {
+  const hash = window.location.hash;
+  if (!hash) return;
+  const params = new URLSearchParams(hash.replace(/^#/, ''));
+  const errDesc = params.get('error_description') || params.get('error');
+  if (errDesc) {
+    const errEl = document.getElementById('auth-error');
+    if (errEl) errEl.textContent = decodeURIComponent(errDesc.replace(/\+/g, ' '));
+    window.history.replaceState({}, document.title, window.location.pathname);
   }
 }
 async function signOut() {
@@ -602,6 +623,7 @@ function _showApp() {
 function _showAuthOverlay() {
   document.getElementById('auth-overlay').style.display = 'flex';
   document.getElementById('app-wrapper').style.display = 'none';
+  _checkUrlHashError();
 }
 function _initApp() {
   LTT_PROXY_URL = getSetting('ltt_proxy_url') || '';
