@@ -647,22 +647,38 @@ function _initApp() {
 }
 
 // Bootstrap auth
-_sb.auth.onAuthStateChange(async function(event, session) {
-  if (session && session.user) {
-    const email = session.user.email || '';
-    if (!email.endsWith('@digismoothie.com')) {
-      await _sb.auth.signOut();
-      const errEl = document.getElementById('auth-error');
-      if (errEl) errEl.textContent = 'Only @digismoothie.com accounts are allowed.';
-      return;
-    }
-    _currentUser = session.user;
-    await _loadUserData();
-    _showApp();
-  } else {
+async function _handleAuthSession(session) {
+  if (!session || !session.user) {
     _currentUser = null;
     _showAuthOverlay();
+    return;
   }
+  const email = session.user.email || '';
+  if (!email.endsWith('@digismoothie.com')) {
+    await _sb.auth.signOut();
+    const errEl = document.getElementById('auth-error');
+    if (errEl) errEl.textContent = 'Only @digismoothie.com accounts are allowed.';
+    return;
+  }
+  // Already initialized for this user — don't reload data (e.g. on token refresh)
+  if (_currentUser && _currentUser.id === session.user.id) return;
+  _currentUser = session.user;
+  try { await _loadUserData(); } catch(e) { console.error('[LTT] Load error:', e); }
+  _showApp();
+}
+
+// Primary bootstrap: explicitly read the persisted session on every page load.
+// onAuthStateChange alone is unreliable for restoring sessions across refreshes
+// because it fires asynchronously and any thrown error silently prevents _showApp().
+_sb.auth.getSession().then(function({ data: { session } }) {
+  _handleAuthSession(session);
+});
+
+// React to explicit auth events only (sign-in after OAuth redirect, sign-out).
+// TOKEN_REFRESHED and INITIAL_SESSION are intentionally ignored here.
+_sb.auth.onAuthStateChange(function(event, session) {
+  if (event === 'SIGNED_IN') _handleAuthSession(session);
+  else if (event === 'SIGNED_OUT') { _currentUser = null; _showAuthOverlay(); }
 });
 
 // ---- APP STATE ----
