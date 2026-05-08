@@ -456,16 +456,6 @@ input[type="color"] {
         <span id="slack-userid-status" style="font-size:12px;color:rgba(255,255,255,0.55);min-height:16px;"></span>
       </div>
 
-      <div class="settings-label">Proxy server</div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;position:relative;">
-        <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;">Connect your Render.com proxy for direct Slack sending and secure Jira config.</p>
-        <input type="text" id="proxy-url-input" placeholder="https://ltt-proxy.onrender.com" style="padding:9px 16px;border-radius:99px;font-size:12px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
-        <div style="display:flex;gap:8px;">
-          <button onclick="saveProxySettings()" class="btn primary" style="padding:9px 18px;font-size:13px;">Save</button>
-          <button onclick="testProxy()" class="btn" style="padding:9px 18px;font-size:13px;">Test connection</button>
-        </div>
-        <span id="proxy-status" style="font-size:12px;color:rgba(255,255,255,0.55);min-height:16px;"></span>
-      </div>
       <div class="settings-label">Background gradient</div>
       <div class="gradient-presets" id="gradient-presets"></div>
 
@@ -616,8 +606,8 @@ async function _migrateFromLocalStorage() {
   }
   // Settings: migrate per-key — only copy keys that are missing from Supabase.
   // Runs regardless of whether other settings already exist so that keys added
-  // later (e.g. ltt_proxy_url) get picked up even after the first migration.
-  const settingsKeys = ['ltt_gradient','ltt_proxy_url','slack_channel','slack_user_id','ltt_noise',
+  // later (e.g. a key added after the initial migration) get picked up.
+  const settingsKeys = ['ltt_gradient','slack_channel','slack_user_id','ltt_noise',
     'jira_access_token','jira_refresh_token','jira_token_expiry','jira_cloud_id',
     'jira_site_name','jira_user_name','jira_user_email','jira_account_id'];
   let migrated = false;
@@ -647,14 +637,12 @@ function _showAuthOverlay() {
   _checkUrlHashError();
 }
 function _initApp() {
-  LTT_PROXY_URL = getSetting('ltt_proxy_url') || '';
   autoCleanSentEntries();
   resetTimer(false);
   loadGradientSetting();
   loadTitle();
   loadBgImage();
   loadSlackChannelSetting();
-  loadProxySettings();
   // Re-apply noise from settings (IIFE ran before auth with empty _settings)
   var overlay = document.getElementById('grain-overlay');
   if (overlay) {
@@ -1200,7 +1188,7 @@ function showTab(name) {
   });
   if (name === 'history') renderHistory();
   if (name === 'weekly') renderWeekly();
-  if (name === 'settings') { renderSettings(); loadSlackChannelSetting(); loadProxySettings(); }
+  if (name === 'settings') { renderSettings(); loadSlackChannelSetting(); }
 }
 
 
@@ -1351,7 +1339,7 @@ function loadBgImage() {
 // ---- JIRA INTEGRATION (OAuth 2.0 PKCE) ----
 var JIRA_CLIENT_ID = '';
 var JIRA_CLIENT_SECRET = ''; // fetched from proxy /config — never stored client-side
-var LTT_PROXY_URL = '';
+var LTT_PROXY_URL = 'https://ltt-proxy.onrender.com';
 async function loadConfig() {
   if (!LTT_PROXY_URL) return;
   try {
@@ -1384,10 +1372,6 @@ async function generateCodeChallenge(verifier) {
 
 async function connectJira() {
   var st = document.getElementById('jira-status');
-  if (!LTT_PROXY_URL) {
-    if (st) { st.textContent = 'Please configure a proxy server first.'; st.style.color = 'rgba(255,160,160,0.9)'; }
-    return;
-  }
   if (!JIRA_CLIENT_SECRET) await loadConfig();
   if (!JIRA_CLIENT_SECRET) {
     if (st) { st.textContent = 'Could not load app secret from proxy. Check your proxy URL.'; st.style.color = 'rgba(255,160,160,0.9)'; }
@@ -2562,46 +2546,6 @@ function renderSettings() {
   if (el) el.innerHTML = swatchHtml;
 }
 
-function saveProxySettings() {
-  var url = (document.getElementById('proxy-url-input').value || '').trim().replace(/\/$/, '');
-  var status = document.getElementById('proxy-status');
-  if (!url) { status.textContent = 'Please enter your proxy URL.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
-  setSetting('ltt_proxy_url', url);
-  LTT_PROXY_URL = url;
-  status.textContent = 'Saved!';
-  status.style.color = 'rgba(160,255,180,0.9)';
-  setTimeout(function() { status.textContent = ''; }, 3000);
-  loadConfig();
-}
-
-async function testProxy() {
-  var url = getSetting('ltt_proxy_url') || '';
-  var status = document.getElementById('proxy-status');
-  if (!url) { status.textContent = 'No proxy URL saved yet.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
-  status.textContent = 'Testing…'; status.style.color = 'rgba(255,255,255,0.55)';
-  try {
-    var r = await fetch(url + '/config');
-    var data = await r.json();
-    if (data.jiraClientId) {
-      JIRA_CLIENT_ID = data.jiraClientId;
-      status.textContent = '✓ Connected! Jira config loaded.';
-    } else {
-      status.textContent = '✓ Connected.';
-    }
-    status.style.color = 'rgba(160,255,180,0.9)';
-  } catch(e) {
-    status.textContent = '✗ Could not reach proxy. Check the URL.';
-    status.style.color = 'rgba(255,160,160,0.9)';
-  }
-}
-
-function loadProxySettings() {
-  var url = getSetting('ltt_proxy_url') || '';
-  var urlInput = document.getElementById('proxy-url-input');
-  if (urlInput) urlInput.value = url;
-  // Never pre-fill the secret field — it lives in memory only
-}
-
 // ---- SLACK STANDUP ----
 
 function saveSlackChannel() {
@@ -2681,7 +2625,7 @@ function closeSlackStandupModal() {
 }
 
 async function sendSlackStandup() {
-  var proxyUrl = getSetting('ltt_proxy_url') || '';
+  var proxyUrl = LTT_PROXY_URL;
   var accomplished = (document.getElementById('slack-accomplished-input').value || '').trim();
   var workOn = (document.getElementById('slack-workon-input').value || '').trim();
   var status = document.getElementById('slack-send-status');
