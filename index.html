@@ -454,7 +454,7 @@ input[type="color"] {
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;position:relative;">
         <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;">Connect your Render.com proxy for direct Slack sending and secure Jira config.</p>
         <input type="text" id="proxy-url-input" placeholder="https://ltt-proxy.onrender.com" style="padding:9px 16px;border-radius:99px;font-size:12px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
-        <input type="password" id="proxy-secret-input" placeholder="Your proxy secret key" style="padding:9px 16px;border-radius:99px;font-size:12px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
+        <input type="password" id="proxy-secret-input" placeholder="Proxy secret (optional — only needed for Slack standup)" style="padding:9px 16px;border-radius:99px;font-size:12px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
         <div style="display:flex;gap:8px;">
           <button onclick="saveProxySettings()" class="btn primary" style="padding:9px 18px;font-size:13px;">Save</button>
           <button onclick="testProxy()" class="btn" style="padding:9px 18px;font-size:13px;">Test connection</button>
@@ -2565,16 +2565,19 @@ function saveProxySettings() {
   var secret = (document.getElementById('proxy-secret-input').value || '').trim();
   var status = document.getElementById('proxy-status');
   if (!url) { status.textContent = 'Please enter your proxy URL.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
-  if (!secret) { status.textContent = 'Please enter your proxy secret.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
+  // URL is always saved — it's needed for Jira config fetch (/config is public).
+  // Secret is optional here: only required for Slack standup (/standup).
   setSetting('ltt_proxy_url', url);
-  // Store secret in memory only — not localStorage
-  _proxySecretMemory = secret;
   LTT_PROXY_URL = url;
-  // Clear the secret field so it's not sitting visible in the UI
-  document.getElementById('proxy-secret-input').value = '';
-  status.textContent = 'Saved! Secret is held in memory for this session.';
+  if (secret) {
+    _proxySecretMemory = secret;
+    document.getElementById('proxy-secret-input').value = '';
+    status.textContent = 'Saved! Secret is held in memory for this session.';
+  } else {
+    status.textContent = 'Proxy URL saved. Enter the secret to enable Slack standup.';
+  }
   status.style.color = 'rgba(160,255,180,0.9)';
-  setTimeout(function() { status.textContent = ''; }, 3000);
+  setTimeout(function() { status.textContent = ''; }, 4000);
   loadConfig();
 }
 
