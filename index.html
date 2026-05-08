@@ -283,7 +283,7 @@ input[type="color"] {
   document.documentElement.classList.add(isDark ? 'dark' : 'light');
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
 
@@ -537,11 +537,16 @@ function _dbToEntry(row) {
 async function signInWithGoogle() {
   const errEl = document.getElementById('auth-error');
   if (errEl) errEl.textContent = '';
-  const { error } = await _sb.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.href, queryParams: { hd: 'digismoothie.com' } }
-  });
-  if (error && errEl) errEl.textContent = error.message;
+  try {
+    const { error } = await _sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href, queryParams: { hd: 'digismoothie.com' } }
+    });
+    if (error && errEl) errEl.textContent = error.message;
+  } catch(e) {
+    if (errEl) errEl.textContent = 'Sign-in failed: ' + (e.message || e);
+    console.error('signInWithGoogle error:', e);
+  }
 }
 async function signOut() {
   await _sb.auth.signOut();
