@@ -283,7 +283,7 @@ input[type="color"] {
   document.documentElement.classList.add(isDark ? 'dark' : 'light');
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
 </head>
 <body>
 
@@ -585,35 +585,42 @@ async function _loadUserData() {
 }
 
 async function _migrateFromLocalStorage() {
-  if (_entries.length > 0 || Object.keys(_settings).length > 0) return;
-  const raw = localStorage.getItem('tinywatch_v3');
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        _entries = parsed.filter(e => e && e.id).map(e => ({
-          id: Number(e.id), name: String(e.name || 'Unnamed'),
-          ms: Number(e.ms) || 0, ts: Number(e.ts),
-          colorIdx: Number(e.colorIdx) || 0, untracked: !!e.untracked,
-          sortOrder: e.sortOrder, jiraKey: e.jiraKey || null,
-          jiraSummary: e.jiraSummary || null, jiraDesc: e.jiraDesc || '',
-          jiraSent: !!e.jiraSent, clientName: e.clientName || null,
-          deletedFromBulk: !!e.deletedFromBulk, carriedOver: !!e.carriedOver
-        }));
-        if (_entries.length > 0) {
-          await _sb.from('time_entries').upsert(_entries.map(_entryToDb), { onConflict: 'id' });
+  // Entries: only migrate if Supabase has none
+  if (_entries.length === 0) {
+    const raw = localStorage.getItem('tinywatch_v3');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          _entries = parsed.filter(e => e && e.id).map(e => ({
+            id: Number(e.id), name: String(e.name || 'Unnamed'),
+            ms: Number(e.ms) || 0, ts: Number(e.ts),
+            colorIdx: Number(e.colorIdx) || 0, untracked: !!e.untracked,
+            sortOrder: e.sortOrder, jiraKey: e.jiraKey || null,
+            jiraSummary: e.jiraSummary || null, jiraDesc: e.jiraDesc || '',
+            jiraSent: !!e.jiraSent, clientName: e.clientName || null,
+            deletedFromBulk: !!e.deletedFromBulk, carriedOver: !!e.carriedOver
+          }));
+          if (_entries.length > 0) {
+            await _sb.from('time_entries').upsert(_entries.map(_entryToDb), { onConflict: 'id' });
+          }
+          localStorage.removeItem('tinywatch_v3');
         }
-        localStorage.removeItem('tinywatch_v3');
-      }
-    } catch(e) { console.warn('Migration error:', e); }
+      } catch(e) { console.warn('Migration error:', e); }
+    }
   }
+  // Settings: migrate per-key — only copy keys that are missing from Supabase.
+  // Runs regardless of whether other settings already exist so that keys added
+  // later (e.g. ltt_proxy_url) get picked up even after the first migration.
   const settingsKeys = ['ltt_gradient','ltt_proxy_url','slack_channel','slack_user_id','ltt_noise',
     'jira_access_token','jira_refresh_token','jira_token_expiry','jira_cloud_id',
     'jira_site_name','jira_user_name','jira_user_email','jira_account_id'];
   let migrated = false;
   settingsKeys.forEach(k => {
-    const v = localStorage.getItem(k);
-    if (v !== null) { _settings[k] = v; localStorage.removeItem(k); migrated = true; }
+    if (!Object.prototype.hasOwnProperty.call(_settings, k)) {
+      const v = localStorage.getItem(k);
+      if (v !== null) { _settings[k] = v; localStorage.removeItem(k); migrated = true; }
+    }
   });
   if (migrated) await _pushSettings();
 }
