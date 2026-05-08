@@ -454,7 +454,6 @@ input[type="color"] {
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;position:relative;">
         <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;">Connect your Render.com proxy for direct Slack sending and secure Jira config.</p>
         <input type="text" id="proxy-url-input" placeholder="https://ltt-proxy.onrender.com" style="padding:9px 16px;border-radius:99px;font-size:12px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
-        <input type="password" id="proxy-secret-input" placeholder="Proxy secret (optional — only needed for Slack standup)" style="padding:9px 16px;border-radius:99px;font-size:12px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
         <div style="display:flex;gap:8px;">
           <button onclick="saveProxySettings()" class="btn primary" style="padding:9px 18px;font-size:13px;">Save</button>
           <button onclick="testProxy()" class="btn" style="padding:9px 18px;font-size:13px;">Test connection</button>
@@ -650,7 +649,7 @@ function _initApp() {
     var noiseVal = getSetting('ltt_noise') !== null ? parseFloat(getSetting('ltt_noise')) / 100 : 0.08;
     overlay.style.opacity = noiseVal.toFixed(2);
   }
-  localStorage.removeItem('ltt_proxy_secret');
+  localStorage.removeItem('ltt_proxy_secret'); // clean up old key
   // Load proxy config first so JIRA_CLIENT_SECRET is available for the OAuth callback
   loadConfig().then(function() {
     if (window.location.search.includes('code=')) handleOAuthCallback();
@@ -1341,15 +1340,6 @@ function loadBgImage() {
 var JIRA_CLIENT_ID = '';
 var JIRA_CLIENT_SECRET = ''; // fetched from proxy /config — never stored client-side
 var LTT_PROXY_URL = '';
-var _proxySecretMemory = ''; // never saved to localStorage — lives in memory only
-
-function getProxySecret() {
-  if (_proxySecretMemory) return _proxySecretMemory;
-  var secret = prompt('Enter your proxy secret to continue:');
-  if (secret) _proxySecretMemory = secret.trim();
-  return _proxySecretMemory;
-}
-
 async function loadConfig() {
   if (!LTT_PROXY_URL) return;
   try {
@@ -2562,22 +2552,13 @@ function renderSettings() {
 
 function saveProxySettings() {
   var url = (document.getElementById('proxy-url-input').value || '').trim().replace(/\/$/, '');
-  var secret = (document.getElementById('proxy-secret-input').value || '').trim();
   var status = document.getElementById('proxy-status');
   if (!url) { status.textContent = 'Please enter your proxy URL.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
-  // URL is always saved — it's needed for Jira config fetch (/config is public).
-  // Secret is optional here: only required for Slack standup (/standup).
   setSetting('ltt_proxy_url', url);
   LTT_PROXY_URL = url;
-  if (secret) {
-    _proxySecretMemory = secret;
-    document.getElementById('proxy-secret-input').value = '';
-    status.textContent = 'Saved! Secret is held in memory for this session.';
-  } else {
-    status.textContent = 'Proxy URL saved. Enter the secret to enable Slack standup.';
-  }
+  status.textContent = 'Saved!';
   status.style.color = 'rgba(160,255,180,0.9)';
-  setTimeout(function() { status.textContent = ''; }, 4000);
+  setTimeout(function() { status.textContent = ''; }, 3000);
   loadConfig();
 }
 
@@ -2717,9 +2698,6 @@ async function sendSlackStandup() {
     return;
   }
 
-  var secret = getProxySecret();
-  if (!secret) { status.textContent = 'Secret is required to send.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
-
   btn.disabled = true;
   btn.textContent = 'Sending…';
   status.textContent = '';
@@ -2727,7 +2705,7 @@ async function sendSlackStandup() {
   try {
     var response = await fetch(proxyUrl + '/standup', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Proxy-Secret': secret },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: message })
     });
     var data = await response.json();
@@ -2738,8 +2716,6 @@ async function sendSlackStandup() {
     btn.textContent = '📋 Copy / Send';
     setTimeout(closeSlackStandupModal, 1800);
   } catch(err) {
-    // Wrong secret — clear memory so user can re-enter
-    if (err.message === 'Unauthorized') _proxySecretMemory = '';
     status.textContent = '✗ ' + (err.message || 'Failed to send.');
     status.style.color = 'rgba(255,160,160,0.9)';
     btn.disabled = false;
