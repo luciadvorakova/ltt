@@ -283,8 +283,30 @@ input[type="color"] {
   document.documentElement.classList.add(isDark ? 'dark' : 'light');
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<!-- ===== AUTH OVERLAY ===== -->
+<div id="auth-overlay" style="position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:var(--grad);background-attachment:fixed;">
+  <div style="position:relative;border-radius:24px;padding:2.5rem 2rem;width:360px;max-width:92%;background:var(--liq-bg);border:1px solid var(--liq-border);box-shadow:var(--liq-shadow);text-align:center;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:80px;background:linear-gradient(180deg,rgba(255,255,255,0.18) 0%,transparent 100%);border-radius:24px 24px 0 0;pointer-events:none;"></div>
+    <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.7),transparent);border-radius:24px 24px 0 0;pointer-events:none;"></div>
+    <div style="position:relative;z-index:1;">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--liq-bg);border:1px solid var(--liq-border);box-shadow:var(--liq-shadow-sm);display:flex;align-items:center;justify-content:center;margin:0 auto 1.2rem;font-size:20px;font-weight:800;color:white;letter-spacing:0.3px;">LTT</div>
+      <h1 style="font-size:20px;margin-bottom:0.4rem;">Lucy's Time Tracker</h1>
+      <p style="color:rgba(255,255,255,0.5);font-size:13px;line-height:1.5;margin-bottom:1.8rem;">Sign in with your @digismoothie.com account to continue.</p>
+      <button onclick="signInWithGoogle()" style="position:relative;overflow:hidden;width:100%;padding:13px;border-radius:99px;font-size:14px;font-weight:600;cursor:pointer;color:var(--btn-primary-text);background:var(--btn-primary-bg);border:1px solid rgba(255,255,255,0.9);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5),0 2px 12px rgba(255,255,255,0.1);font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+        Sign in with Google
+      </button>
+      <div id="auth-error" style="color:rgba(255,160,160,0.9);font-size:13px;margin-top:1rem;min-height:20px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP (hidden until authenticated) ===== -->
+<div id="app-wrapper" style="display:none;">
 <div class="app"><div class="glass-app">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;padding-right:0;">
     <div style="display:flex;align-items:center;gap:10px;">
@@ -297,7 +319,7 @@ input[type="color"] {
       <h1 id="app-title" style="margin-bottom:0;cursor:pointer;user-select:none;font-size:16px;" onclick="startEditTitle()" title="Click to rename">Lucy's Time Tracker</h1>
       <input id="app-title-input" type="text" maxlength="40" onblur="saveTitle()" onkeydown="if(event.key==='Enter')saveTitle();if(event.key==='Escape')cancelEditTitle();" style="display:none;font-size:16px;font-weight:700;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:99px;color:white;padding:4px 14px;outline:none;width:220px;" />
     </div>
-
+    <button onclick="signOut()" title="Sign out" style="position:relative;overflow:hidden;background:var(--liq-bg);border:1px solid var(--liq-border);border-radius:99px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;color:rgba(255,255,255,0.7);box-shadow:var(--liq-shadow-sm);flex-shrink:0;">Sign out</button>
   </div>
   <div class="glass-header-divider"></div>
   <div class="tabs">
@@ -449,8 +471,174 @@ input[type="color"] {
     </div>
   </div>
 </div>
+</div>
+</div>
 
 <script>
+// ---- SUPABASE ----
+const SUPABASE_URL = 'https://rzjbfqgkprozguyjrxbp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6amJmcWdrcHJvemd1eWpyeGJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTU0OTIsImV4cCI6MjA5MzgzMTQ5Mn0.PN4vN-_MQkYSGqsKaVT1XFK27BVDW0dnlX9BXXcGhVQ';
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let _currentUser = null;
+let _entries = [];      // in-memory cache; source of truth for all entry reads
+let _settings = {};     // in-memory settings; synced to Supabase user_settings
+let _settingsSyncTimer = null;
+
+// Settings helpers — replace localStorage for non-theme settings
+function getSetting(key) {
+  return Object.prototype.hasOwnProperty.call(_settings, key) ? _settings[key] : null;
+}
+function setSetting(key, val) {
+  _settings[key] = val;
+  clearTimeout(_settingsSyncTimer);
+  _settingsSyncTimer = setTimeout(_pushSettings, 800);
+}
+function removeSetting(key) {
+  delete _settings[key];
+  clearTimeout(_settingsSyncTimer);
+  _settingsSyncTimer = setTimeout(_pushSettings, 800);
+}
+async function _pushSettings() {
+  if (!_currentUser) return;
+  const { error } = await _sb.from('user_settings').upsert(
+    { user_id: _currentUser.id, settings: _settings, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id' }
+  );
+  if (error) console.error('Settings sync error:', error);
+}
+
+// DB row ↔ entry object conversion
+function _entryToDb(e) {
+  return {
+    id: Number(e.id), user_id: _currentUser.id,
+    name: e.name, ms: Number(e.ms) || 0, ts: Number(e.ts),
+    color_idx: Number(e.colorIdx) || 0, untracked: !!e.untracked,
+    sort_order: e.sortOrder !== undefined ? e.sortOrder : null,
+    jira_key: e.jiraKey || null, jira_summary: e.jiraSummary || null,
+    jira_desc: e.jiraDesc || '', jira_sent: !!e.jiraSent,
+    client_name: e.clientName || null, deleted_from_bulk: !!e.deletedFromBulk,
+    carried_over: !!e.carriedOver, updated_at: new Date().toISOString()
+  };
+}
+function _dbToEntry(row) {
+  return {
+    id: Number(row.id), name: row.name,
+    ms: Number(row.ms) || 0, ts: Number(row.ts),
+    colorIdx: Number(row.color_idx) || 0, untracked: !!row.untracked,
+    sortOrder: (row.sort_order !== null && row.sort_order !== undefined) ? Number(row.sort_order) : undefined,
+    jiraKey: row.jira_key || null, jiraSummary: row.jira_summary || null,
+    jiraDesc: row.jira_desc || '', jiraSent: !!row.jira_sent,
+    clientName: row.client_name || null, deletedFromBulk: !!row.deleted_from_bulk,
+    carriedOver: !!row.carried_over
+  };
+}
+
+// Auth functions
+async function signInWithGoogle() {
+  const errEl = document.getElementById('auth-error');
+  if (errEl) errEl.textContent = '';
+  const { error } = await _sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href, queryParams: { hd: 'digismoothie.com' } }
+  });
+  if (error && errEl) errEl.textContent = error.message;
+}
+async function signOut() {
+  await _sb.auth.signOut();
+}
+
+async function _loadUserData() {
+  const { data: rows } = await _sb.from('time_entries').select('*');
+  _entries = (rows || []).map(_dbToEntry);
+  const { data: settRow } = await _sb.from('user_settings').select('settings').single();
+  _settings = (settRow && settRow.settings) ? settRow.settings : {};
+  await _migrateFromLocalStorage();
+}
+
+async function _migrateFromLocalStorage() {
+  if (_entries.length > 0 || Object.keys(_settings).length > 0) return;
+  const raw = localStorage.getItem('tinywatch_v3');
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        _entries = parsed.filter(e => e && e.id).map(e => ({
+          id: Number(e.id), name: String(e.name || 'Unnamed'),
+          ms: Number(e.ms) || 0, ts: Number(e.ts),
+          colorIdx: Number(e.colorIdx) || 0, untracked: !!e.untracked,
+          sortOrder: e.sortOrder, jiraKey: e.jiraKey || null,
+          jiraSummary: e.jiraSummary || null, jiraDesc: e.jiraDesc || '',
+          jiraSent: !!e.jiraSent, clientName: e.clientName || null,
+          deletedFromBulk: !!e.deletedFromBulk, carriedOver: !!e.carriedOver
+        }));
+        if (_entries.length > 0) {
+          await _sb.from('time_entries').upsert(_entries.map(_entryToDb), { onConflict: 'id' });
+        }
+        localStorage.removeItem('tinywatch_v3');
+      }
+    } catch(e) { console.warn('Migration error:', e); }
+  }
+  const settingsKeys = ['ltt_gradient','ltt_proxy_url','slack_channel','slack_user_id','ltt_noise',
+    'jira_access_token','jira_refresh_token','jira_token_expiry','jira_cloud_id',
+    'jira_site_name','jira_user_name','jira_user_email','jira_account_id','jira_client_secret'];
+  let migrated = false;
+  settingsKeys.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v !== null) { _settings[k] = v; localStorage.removeItem(k); migrated = true; }
+  });
+  if (migrated) await _pushSettings();
+}
+
+function _showApp() {
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('app-wrapper').style.display = '';
+  _initApp();
+}
+function _showAuthOverlay() {
+  document.getElementById('auth-overlay').style.display = 'flex';
+  document.getElementById('app-wrapper').style.display = 'none';
+}
+function _initApp() {
+  LTT_PROXY_URL = getSetting('ltt_proxy_url') || '';
+  autoCleanSentEntries();
+  resetTimer(false);
+  loadGradientSetting();
+  loadTitle();
+  loadBgImage();
+  loadSlackChannelSetting();
+  loadProxySettings();
+  // Re-apply noise from settings (IIFE ran before auth with empty _settings)
+  var overlay = document.getElementById('grain-overlay');
+  if (overlay) {
+    var noiseVal = getSetting('ltt_noise') !== null ? parseFloat(getSetting('ltt_noise')) / 100 : 0.08;
+    overlay.style.opacity = noiseVal.toFixed(2);
+  }
+  loadConfig();
+  localStorage.removeItem('ltt_proxy_secret');
+  if (window.location.search.includes('code=')) { handleOAuthCallback(); }
+  renderToday();
+}
+
+// Bootstrap auth
+_sb.auth.onAuthStateChange(async function(event, session) {
+  if (session && session.user) {
+    const email = session.user.email || '';
+    if (!email.endsWith('@digismoothie.com')) {
+      await _sb.auth.signOut();
+      const errEl = document.getElementById('auth-error');
+      if (errEl) errEl.textContent = 'Only @digismoothie.com accounts are allowed.';
+      return;
+    }
+    _currentUser = session.user;
+    await _loadUserData();
+    _showApp();
+  } else {
+    _currentUser = null;
+    _showAuthOverlay();
+  }
+});
+
+// ---- APP STATE ----
 const STORAGE_KEY = 'tinywatch_v3';
 let timerInterval = null;
 let elapsed = 0;
@@ -483,46 +671,43 @@ function pickColor(id) {
 }
 
 function loadEntries() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const all = JSON.parse(raw);
-    if (!Array.isArray(all)) return [];
-    const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
-    const todayKey = dayKey(Date.now());
-    return all
-      .filter(e => e && e.id !== undefined && e.name !== undefined)
-      .map(e => ({
-        id: Number(e.id),
-        name: String(e.name || 'Unnamed'),
-        ms: Number(e.ms) || 0,
-        ts: Number(e.ts),
-        colorIdx: Number(e.colorIdx) || 0,
-        untracked: !!e.untracked,
-        sortOrder: e.sortOrder,
-        jiraKey: e.jiraKey || null,
-        jiraSummary: e.jiraSummary || null,
-        jiraDesc: e.jiraDesc || '',
-        jiraSent: !!e.jiraSent,
-        clientName: e.clientName || null,
-        deletedFromBulk: !!e.deletedFromBulk,
-        carriedOver: !!e.carriedOver
-      }))
-      .filter(e => {
-        if (!e.id || isNaN(e.id)) return false;
-        if (e.deletedFromBulk) return false;
-        // Keep today's entries always
-        if (dayKey(e.ts) === todayKey) return true;
-        // Carry forward zero-time untracked tasks to today (not yet sent to Jira)
-        if (e.ms === 0 && !e.jiraSent && e.untracked) return true;
-        // Normal 30-day retention for tracked entries
-        return e.ts > cutoff && !isNaN(e.ts);
-      });
-  } catch(err) { return []; }
+  const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+  const todayKey = dayKey(Date.now());
+  return _entries
+    .filter(e => e && e.id !== undefined && e.name !== undefined)
+    .map(e => ({
+      id: Number(e.id), name: String(e.name || 'Unnamed'),
+      ms: Number(e.ms) || 0, ts: Number(e.ts),
+      colorIdx: Number(e.colorIdx) || 0, untracked: !!e.untracked,
+      sortOrder: e.sortOrder, jiraKey: e.jiraKey || null,
+      jiraSummary: e.jiraSummary || null, jiraDesc: e.jiraDesc || '',
+      jiraSent: !!e.jiraSent, clientName: e.clientName || null,
+      deletedFromBulk: !!e.deletedFromBulk, carriedOver: !!e.carriedOver
+    }))
+    .filter(e => {
+      if (!e.id || isNaN(e.id)) return false;
+      if (e.deletedFromBulk) return false;
+      if (dayKey(e.ts) === todayKey) return true;
+      if (e.ms === 0 && !e.jiraSent && e.untracked) return true;
+      return e.ts > cutoff && !isNaN(e.ts);
+    });
 }
 
-function saveEntries(entries) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+function saveEntries(newEntries) {
+  const oldIds = new Set(_entries.map(e => e.id));
+  const newIds = new Set(newEntries.map(e => e.id));
+  const deletedIds = [...oldIds].filter(id => !newIds.has(id));
+  _entries = newEntries.slice();
+  if (_currentUser) {
+    if (newEntries.length > 0) {
+      _sb.from('time_entries').upsert(newEntries.map(_entryToDb), { onConflict: 'id' })
+        .then(({ error }) => { if (error) console.error('Entry upsert error:', error); });
+    }
+    deletedIds.forEach(id => {
+      _sb.from('time_entries').delete().eq('id', id).eq('user_id', _currentUser.id)
+        .then(({ error }) => { if (error) console.error('Entry delete error:', error); });
+    });
+  }
 }
 
 function fmt(ms) {
@@ -899,7 +1084,7 @@ function renderHistory() {
     const dayEntries = byDay[day].sort(function(a,b){ return b.ts - a.ts; });
     const total = dayEntries.reduce(function(s,e){ return s + (e.ms||0); }, 0);
     const hasUnsent = isJiraConnected() && dayEntries.some(function(e) { return e.jiraKey && !e.jiraSent && e.ms > 0; });
-    const hasStandup = !!localStorage.getItem('slack_webhook');
+    const hasStandup = !!getSetting('slack_webhook');
     const rows = dayEntries.map(function(e) {
       const dark = isDarkMode();
     const cardBg = 'transparent';
@@ -949,8 +1134,8 @@ function showTab(name) {
 var JIRA_SITE = 'digismoothie.atlassian.net';
 
 function jiraAuthHeader() {
-  var email = localStorage.getItem('jira_email') || '';
-  var token = localStorage.getItem('jira_token') || '';
+  var email = getSetting('jira_email') || '';
+  var token = getSetting('jira_token') || '';
   return 'Basic ' + btoa(email + ':' + token);
 }
 
@@ -963,8 +1148,8 @@ function saveJiraCredentials() {
     status.style.color = 'rgba(255,160,160,0.9)';
     return;
   }
-  localStorage.setItem('jira_email', email);
-  localStorage.setItem('jira_token', token);
+  setSetting('jira_email', email);
+  setSetting('jira_token', token);
   status.textContent = 'Testing connection...';
   status.style.color = 'rgba(255,255,255,0.55)';
   testJiraConnection(function(ok, msg) {
@@ -974,8 +1159,8 @@ function saveJiraCredentials() {
 }
 
 function clearJiraCredentials() {
-  localStorage.removeItem('jira_email');
-  localStorage.removeItem('jira_token');
+  removeSetting('jira_email');
+  removeSetting('jira_token');
   var email = document.getElementById('jira-email');
   var token = document.getElementById('jira-token');
   if (email) email.value = '';
@@ -999,8 +1184,8 @@ function testJiraConnection(cb) {
 }
 
 function loadJiraCredentials() {
-  var email = localStorage.getItem('jira_email');
-  var token = localStorage.getItem('jira_token');
+  var email = getSetting('jira_email');
+  var token = getSetting('jira_token');
   var emailEl = document.getElementById('jira-email');
   var tokenEl = document.getElementById('jira-token');
   if (email && emailEl) emailEl.value = email;
@@ -1012,7 +1197,7 @@ function loadJiraCredentials() {
 }
 
 function isJiraConnected() {
-  return !!(localStorage.getItem('jira_email') && localStorage.getItem('jira_token'));
+  return !!(getSetting('jira_email') && getSetting('jira_token'));
 }
 
 // ---- Title editing
@@ -1033,7 +1218,7 @@ function saveTitle() {
   var val = input.value.trim();
   if (val) {
     h1.textContent = val;
-    localStorage.setItem('ltt_title', val);
+    setSetting('ltt_title', val);
   }
   input.style.display = 'none';
   h1.style.display = '';
@@ -1046,7 +1231,7 @@ function cancelEditTitle() {
   h1.style.display = '';
 }
 function loadTitle() {
-  var saved = localStorage.getItem('ltt_title');
+  var saved = getSetting('ltt_title');
   if (saved) {
     var h1 = document.getElementById('app-title');
     if (h1) h1.textContent = saved;
@@ -1090,7 +1275,7 @@ function loadBgImage() {
 
 // ---- JIRA INTEGRATION (OAuth 2.0 PKCE) ----
 var JIRA_CLIENT_ID = '';
-var LTT_PROXY_URL = localStorage.getItem('ltt_proxy_url') || '';
+var LTT_PROXY_URL = '';
 var _proxySecretMemory = ''; // never saved to localStorage — lives in memory only
 
 function getProxySecret() {
@@ -1187,11 +1372,13 @@ async function handleOAuthCallback() {
       throw new Error('Token exchange failed: ' + errBody);
     }
     var data = await resp.json();
-    localStorage.setItem('jira_access_token', data.access_token);
-    if (data.refresh_token) localStorage.setItem('jira_refresh_token', data.refresh_token);
-    localStorage.setItem('jira_token_expiry', Date.now() + (data.expires_in * 1000));
-    // Clean URL
+    setSetting('jira_access_token', data.access_token);
+    if (data.refresh_token) setSetting('jira_refresh_token', data.refresh_token);
+    setSetting('jira_token_expiry', String(Date.now() + (data.expires_in * 1000)));
+    // Clean URL and PKCE localStorage artifacts
     window.history.replaceState({}, document.title, JIRA_REDIRECT_URI);
+    localStorage.removeItem('jira_pkce_verifier');
+    localStorage.removeItem('jira_oauth_state');
     // Get cloud ID and user info
     await fetchJiraCloudId();
     await fetchJiraUserInfo();
@@ -1203,7 +1390,7 @@ async function handleOAuthCallback() {
 }
 
 async function refreshJiraToken() {
-  var refresh = localStorage.getItem('jira_refresh_token');
+  var refresh = getSetting('jira_refresh_token');
   if (!refresh) return false;
   try {
     var resp = await fetch('https://auth.atlassian.com/oauth/token', {
@@ -1218,18 +1405,18 @@ async function refreshJiraToken() {
     });
     if (!resp.ok) return false;
     var data = await resp.json();
-    localStorage.setItem('jira_access_token', data.access_token);
-    if (data.refresh_token) localStorage.setItem('jira_refresh_token', data.refresh_token);
-    localStorage.setItem('jira_token_expiry', Date.now() + (data.expires_in * 1000));
+    setSetting('jira_access_token', data.access_token);
+    if (data.refresh_token) setSetting('jira_refresh_token', data.refresh_token);
+    setSetting('jira_token_expiry', String(Date.now() + (data.expires_in * 1000)));
     return true;
   } catch(e) { return false; }
 }
 
 async function jiraFetch(path, options) {
-  var expiry = parseInt(localStorage.getItem('jira_token_expiry') || '0');
+  var expiry = parseInt(getSetting('jira_token_expiry') || '0');
   if (Date.now() > expiry - 60000) await refreshJiraToken();
-  var token = localStorage.getItem('jira_access_token');
-  var cloudId = localStorage.getItem('jira_cloud_id');
+  var token = getSetting('jira_access_token');
+  var cloudId = getSetting('jira_cloud_id');
   var base = 'https://api.atlassian.com/ex/jira/' + cloudId;
   var opts = options || {};
   opts.headers = Object.assign({ 'Authorization': 'Bearer ' + token, 'Accept': 'application/json', 'Content-Type': 'application/json' }, opts.headers || {});
@@ -1237,32 +1424,33 @@ async function jiraFetch(path, options) {
 }
 
 async function fetchJiraCloudId() {
-  var token = localStorage.getItem('jira_access_token');
+  var token = getSetting('jira_access_token');
   var resp = await fetch('https://api.atlassian.com/oauth/token/accessible-resources', {
     headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/json' }
   });
   var sites = await resp.json();
   var site = sites.find(function(s) { return s.url.includes(JIRA_SITE); }) || sites[0];
   if (site) {
-    localStorage.setItem('jira_cloud_id', site.id);
-    localStorage.setItem('jira_site_name', site.name);
+    setSetting('jira_cloud_id', site.id);
+    setSetting('jira_site_name', site.name);
   }
 }
 
 async function fetchJiraUserInfo() {
   var resp = await jiraFetch('/rest/api/3/myself');
   var user = await resp.json();
-  localStorage.setItem('jira_user_name', user.displayName || '');
-  localStorage.setItem('jira_user_email', user.emailAddress || '');
-  localStorage.setItem('jira_account_id', user.accountId || '');
+  setSetting('jira_user_name', user.displayName || '');
+  setSetting('jira_user_email', user.emailAddress || '');
+  setSetting('jira_account_id', user.accountId || '');
 }
 
 function isJiraConnected() {
-  return !!(localStorage.getItem('jira_access_token') && localStorage.getItem('jira_cloud_id'));
+  return !!(getSetting('jira_access_token') && getSetting('jira_cloud_id'));
 }
 
 function disconnectJira() {
-  ['jira_access_token','jira_refresh_token','jira_token_expiry','jira_cloud_id','jira_site_name','jira_user_name','jira_user_email','jira_account_id','jira_pkce_verifier','jira_oauth_state','jira_client_secret'].forEach(function(k) { localStorage.removeItem(k); });
+  ['jira_access_token','jira_refresh_token','jira_token_expiry','jira_cloud_id','jira_site_name','jira_user_name','jira_user_email','jira_account_id'].forEach(function(k) { removeSetting(k); });
+  ['jira_pkce_verifier','jira_oauth_state','jira_client_secret'].forEach(function(k) { localStorage.removeItem(k); });
   updateJiraUI();
 }
 
@@ -1275,8 +1463,8 @@ function updateJiraUI() {
   if (connected) {
     var nameEl = document.getElementById('jira-user-name');
     var emailEl = document.getElementById('jira-user-email');
-    if (nameEl) nameEl.textContent = localStorage.getItem('jira_user_name') || 'Connected';
-    if (emailEl) emailEl.textContent = localStorage.getItem('jira_user_email') || '';
+    if (nameEl) nameEl.textContent = getSetting('jira_user_name') || 'Connected';
+    if (emailEl) emailEl.textContent = getSetting('jira_user_email') || '';
   }
 }
 
@@ -1302,7 +1490,7 @@ function saveTitle() {
   var inp = document.getElementById('app-title-input');
   if (!h1 || !inp) return;
   var val = inp.value.trim();
-  if (val) { h1.textContent = val; localStorage.setItem('ltt_title', val); }
+  if (val) { h1.textContent = val; setSetting('ltt_title', val); }
   inp.style.display = 'none'; h1.style.display = '';
 }
 function cancelEditTitle() {
@@ -1312,7 +1500,7 @@ function cancelEditTitle() {
   inp.style.display = 'none'; h1.style.display = '';
 }
 function loadTitle() {
-  var saved = localStorage.getItem('ltt_title');
+  var saved = getSetting('ltt_title');
   if (saved) { var h1 = document.getElementById('app-title'); if (h1) h1.textContent = saved; }
 }
 
@@ -1376,7 +1564,7 @@ function loadBgImage() {
   var overlay = document.getElementById('grain-overlay');
   if (overlay) {
     overlay.style.backgroundImage = 'url(' + dataUrl + ')';
-    var savedNoise = localStorage.getItem('ltt_noise');
+    var savedNoise = getSetting('ltt_noise');
     var noiseVal = savedNoise !== null ? parseFloat(savedNoise) / 100 : 0.08;
     overlay.style.opacity = noiseVal.toFixed(2);
   }
@@ -2277,7 +2465,7 @@ var GRADIENT_PRESETS = [
 var activePreset = 0;
 
 function loadGradientSetting() {
-  var saved = localStorage.getItem('ltt_gradient');
+  var saved = getSetting('ltt_gradient');
   // Validate saved grad still exists in presets, otherwise use default
   var grad = saved || GRADIENT_PRESETS[0].grad;
   applyGradient(grad);
@@ -2293,13 +2481,13 @@ function applyGradientPreset(idx) {
   var p = GRADIENT_PRESETS[idx];
   if (!p) return;
   applyGradient(p.grad);
-  localStorage.setItem('ltt_gradient', p.grad);
+  setSetting('ltt_gradient', p.grad);
   renderSettings();
 }
 
 function renderSettings() {
   loadJiraCredentials();
-  var currentGrad = localStorage.getItem('ltt_gradient') || GRADIENT_PRESETS[0].grad;
+  var currentGrad = getSetting('ltt_gradient') || GRADIENT_PRESETS[0].grad;
   var swatchHtml = GRADIENT_PRESETS.map(function(p, i) {
     var isActive = currentGrad === p.grad;
     return '<div class="preset-swatch' + (isActive ? ' active' : '') + '" style="background:' + p.swatch + '" onclick="applyGradientPreset(' + i + ')" title="' + p.label + '"></div>';
@@ -2314,7 +2502,7 @@ function saveProxySettings() {
   var status = document.getElementById('proxy-status');
   if (!url) { status.textContent = 'Please enter your proxy URL.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
   if (!secret) { status.textContent = 'Please enter your proxy secret.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
-  localStorage.setItem('ltt_proxy_url', url);
+  setSetting('ltt_proxy_url', url);
   // Store secret in memory only — not localStorage
   _proxySecretMemory = secret;
   LTT_PROXY_URL = url;
@@ -2327,7 +2515,7 @@ function saveProxySettings() {
 }
 
 async function testProxy() {
-  var url = localStorage.getItem('ltt_proxy_url') || '';
+  var url = getSetting('ltt_proxy_url') || '';
   var status = document.getElementById('proxy-status');
   if (!url) { status.textContent = 'No proxy URL saved yet.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
   status.textContent = 'Testing…'; status.style.color = 'rgba(255,255,255,0.55)';
@@ -2348,7 +2536,7 @@ async function testProxy() {
 }
 
 function loadProxySettings() {
-  var url = localStorage.getItem('ltt_proxy_url') || '';
+  var url = getSetting('ltt_proxy_url') || '';
   var urlInput = document.getElementById('proxy-url-input');
   if (urlInput) urlInput.value = url;
   // Never pre-fill the secret field — it lives in memory only
@@ -2362,7 +2550,7 @@ function saveSlackChannel() {
   var val = (input.value || '').trim();
   if (!val) { status.textContent = 'Please enter a channel name.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
   if (!val.startsWith('#')) val = '#' + val;
-  localStorage.setItem('slack_channel', val);
+  setSetting('slack_channel', val);
   input.value = val;
   status.textContent = 'Saved!';
   status.style.color = 'rgba(160,255,180,0.9)';
@@ -2374,15 +2562,15 @@ function saveSlackUserId() {
   var val = (document.getElementById('slack-user-id-input').value || '').trim();
   var status = document.getElementById('slack-userid-status');
   if (!val) { status.textContent = 'Please enter your Slack member ID.'; status.style.color = 'rgba(255,160,160,0.9)'; return; }
-  localStorage.setItem('slack_user_id', val);
+  setSetting('slack_user_id', val);
   status.textContent = '✓ Saved!';
   status.style.color = 'rgba(160,255,180,0.9)';
   setTimeout(function() { status.textContent = ''; }, 2500);
 }
 
 function loadSlackChannelSetting() {
-  var ch = localStorage.getItem('slack_channel') || '';
-  var uid = localStorage.getItem('slack_user_id') || '';
+  var ch = getSetting('slack_channel') || '';
+  var uid = getSetting('slack_user_id') || '';
   var input = document.getElementById('slack-channel-input');
   var uidInput = document.getElementById('slack-user-id-input');
   if (input) input.value = ch;
@@ -2390,7 +2578,7 @@ function loadSlackChannelSetting() {
 }
 
 function showSlackStandupModal(day) {
-  var channel = localStorage.getItem('slack_channel') || '';
+  var channel = getSetting('slack_channel') || '';
   document.getElementById('slack-standup-channel').textContent = channel ? 'Copy & paste to ' + channel : 'Copy to clipboard';
 
   var entries = loadEntries();
@@ -2433,14 +2621,14 @@ function closeSlackStandupModal() {
 }
 
 async function sendSlackStandup() {
-  var proxyUrl = localStorage.getItem('ltt_proxy_url') || '';
+  var proxyUrl = getSetting('ltt_proxy_url') || '';
   var accomplished = (document.getElementById('slack-accomplished-input').value || '').trim();
   var workOn = (document.getElementById('slack-workon-input').value || '').trim();
   var status = document.getElementById('slack-send-status');
   var btn = document.getElementById('slack-send-btn');
 
-  var slackUserId = localStorage.getItem('slack_user_id') || '';
-  var userName = slackUserId ? '<@' + slackUserId + '>' : (localStorage.getItem('slack_display_name') || 'Lucia');
+  var slackUserId = getSetting('slack_user_id') || '';
+  var userName = slackUserId ? '<@' + slackUserId + '>' : (getSetting('slack_display_name') || 'Lucia');
   var message = ':boom: submission from ' + userName + '\n\n' +
     ':rocket: *I accomplished:*\n' + (accomplished || '—') + '\n\n' +
     ':soon: *I will work on:*\n' + (workOn || '—') + '\n\n' +
@@ -2509,19 +2697,8 @@ function autoCleanSentEntries() {
   setTimeout(function() { autoCleanSentEntries(); renderToday(); renderHistory(); scheduleMidnightCleanup(); }, midnight - now);
 })();
 
-autoCleanSentEntries();
-resetTimer(false);
-loadGradientSetting();
-loadTitle();
-loadBgImage();
-loadSlackChannelSetting();
-loadProxySettings();
-loadConfig();
-// Remove old proxy secret from localStorage if it was saved by a previous version
-localStorage.removeItem('ltt_proxy_secret');
-// Handle OAuth callback if returning from Atlassian
-if (window.location.search.includes('code=')) { handleOAuthCallback(); }
-renderToday();
+// Init is driven by _sb.auth.onAuthStateChange above.
+// _initApp() is called after successful login + data load.
 // drag drop inits after each renderToday call
 </script>
 <div class="bg-orbs">
