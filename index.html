@@ -2183,13 +2183,16 @@ async function sendWorklogToJira(id) {
       var errText = await resp.text();
       throw new Error(errText);
     }
-    // Mark as sent — lock the entry
-    var idx = entries.findIndex(function(e) { return e.id === Number(id); });
-    if (idx > -1) {
-      entries[idx].jiraSent = true;
-      entries[idx].jiraDesc = desc;
-      entries[idx].untracked = false;
-      saveEntries(entries);
+    // Mark as sent — update _entries directly, then targeted upsert
+    var ei = _entries.findIndex(function(e) { return e.id === Number(id); });
+    if (ei > -1) {
+      _entries[ei].jiraSent = true;
+      _entries[ei].jiraDesc = desc;
+      _entries[ei].untracked = false;
+      if (_currentUser) {
+        _sb.from('time_entries').upsert(_entryToDb(_entries[ei]), { onConflict: 'id' })
+          .then(function(r) { if (r.error) console.error('jiraSent upsert error:', r.error); });
+      }
     }
     if (status) { status.textContent = '✓ Worklog posted to Jira!'; status.style.color = 'rgba(160,255,180,0.9)'; }
     if (btn) { btn.textContent = 'Done!'; }
@@ -2365,6 +2368,7 @@ async function sendBulkToJira() {
   var entries = loadEntries();
   var errors = [];
   var successCount = 0;
+  var changedRows = [];
   for (var i = 0; i < selectedIds.length; i++) {
     var id = Number(selectedIds[i]);
     var entry = entries.find(function(e) { return e.id === id; });
@@ -2387,12 +2391,19 @@ async function sendBulkToJira() {
     try {
       var resp = await jiraFetch('/rest/api/3/issue/' + entry.jiraKey + '/worklog', { method:'POST', body:JSON.stringify(body) });
       if (!resp.ok) throw new Error(await resp.text());
-      var idx = entries.findIndex(function(e) { return e.id === id; });
-      if (idx > -1) { entries[idx].jiraSent = true; entries[idx].untracked = false; }
+      var ei = _entries.findIndex(function(e) { return e.id === id; });
+      if (ei > -1) {
+        _entries[ei].jiraSent = true;
+        _entries[ei].untracked = false;
+        changedRows.push(_entryToDb(_entries[ei]));
+      }
       successCount++;
     } catch(e) { errors.push(entry.jiraKey + ': ' + (e.message || 'failed')); }
   }
-  saveEntries(entries);
+  if (changedRows.length && _currentUser) {
+    _sb.from('time_entries').upsert(changedRows, { onConflict: 'id' })
+      .then(function(r) { if (r.error) console.error('bulk jiraSent upsert error:', r.error); });
+  }
   closeBulkModal();
   renderToday(); renderHistory();
   updateBulkJiraBtn();
