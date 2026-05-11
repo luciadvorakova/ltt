@@ -253,7 +253,6 @@ input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
 .preset-swatch:hover { transform: scale(1.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 5px 16px rgba(0,0,0,0.22); }
 .preset-swatch.active { border-color: rgba(255,255,255,0.75); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 2.5px rgba(255,255,255,0.3), 0 4px 12px rgba(0,0,0,0.2); }
 .custom-gradient-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; position: relative; }
-.color-picker-wrap { display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .color-label { font-size: 11px; color: rgba(255,255,255,0.48); font-weight: 500; }
 input[type="color"] {
   width: 48px; height: 48px; border-radius: 16px;
@@ -510,7 +509,7 @@ function _entryToDb(e) {
   return {
     id: Number(e.id), user_id: _currentUser.id,
     name: e.name, ms: Number(e.ms) || 0, ts: Number(e.ts),
-    color_idx: Number(e.colorIdx) || 0, untracked: !!e.untracked,
+    untracked: !!e.untracked,
     sort_order: e.sortOrder !== undefined ? e.sortOrder : null,
     jira_key: e.jiraKey || null, jira_summary: e.jiraSummary || null,
     jira_desc: e.jiraDesc || '', jira_sent: !!e.jiraSent,
@@ -522,7 +521,7 @@ function _dbToEntry(row) {
   return {
     id: Number(row.id), name: row.name,
     ms: Number(row.ms) || 0, ts: Number(row.ts),
-    colorIdx: Number(row.color_idx) || 0, untracked: !!row.untracked,
+    untracked: !!row.untracked,
     sortOrder: (row.sort_order !== null && row.sort_order !== undefined) ? Number(row.sort_order) : undefined,
     jiraKey: row.jira_key || null, jiraSummary: row.jira_summary || null,
     jiraDesc: row.jira_desc || '', jiraSent: !!row.jira_sent,
@@ -590,7 +589,7 @@ async function _migrateFromLocalStorage() {
           _entries = parsed.filter(e => e && e.id).map(e => ({
             id: Number(e.id), name: String(e.name || 'Unnamed'),
             ms: Number(e.ms) || 0, ts: Number(e.ts),
-            colorIdx: Number(e.colorIdx) || 0, untracked: !!e.untracked,
+            untracked: !!e.untracked,
             sortOrder: e.sortOrder, jiraKey: e.jiraKey || null,
             jiraSummary: e.jiraSummary || null, jiraDesc: e.jiraDesc || '',
             jiraSent: !!e.jiraSent, clientName: e.clientName || null,
@@ -709,29 +708,11 @@ let startedAt = null;
 let running = false;
 let activeEntryId = null;
 
-// Pastel colors — bg, border-left, text color
-const PASTEL_COLORS = [
-  { bg: 'rgba(255,180,180,0.28)', border: 'rgba(255,160,160,0.55)', bTop: 'rgba(255,220,220,0.8)', text: '#5a1a1a', dbg: 'rgba(255,120,120,0.1)', dborder: 'rgba(255,160,160,0.25)', dbTop: 'rgba(255,200,200,0.3)', dtext: '#ffcece' },
-  { bg: 'rgba(255,180,230,0.28)', border: 'rgba(255,150,210,0.55)', bTop: 'rgba(255,220,245,0.8)', text: '#5a1a50', dbg: 'rgba(255,120,210,0.1)', dborder: 'rgba(255,150,210,0.25)', dbTop: 'rgba(255,200,240,0.3)', dtext: '#ffcef0' },
-  { bg: 'rgba(180,180,255,0.28)', border: 'rgba(150,150,255,0.55)', bTop: 'rgba(220,220,255,0.8)', text: '#1a1a5a', dbg: 'rgba(120,120,255,0.1)', dborder: 'rgba(150,150,255,0.25)', dbTop: 'rgba(200,200,255,0.3)', dtext: '#ceceff' },
-  { bg: 'rgba(180,230,255,0.28)', border: 'rgba(140,210,255,0.55)', bTop: 'rgba(220,245,255,0.8)', text: '#1a505a', dbg: 'rgba(120,210,255,0.1)', dborder: 'rgba(140,210,255,0.25)', dbTop: 'rgba(200,240,255,0.3)', dtext: '#cef0ff' },
-  { bg: 'rgba(180,255,200,0.28)', border: 'rgba(140,240,170,0.55)', bTop: 'rgba(220,255,235,0.8)', text: '#1a5a2a', dbg: 'rgba(120,240,160,0.1)', dborder: 'rgba(140,240,170,0.25)', dbTop: 'rgba(200,255,220,0.3)', dtext: '#ceffda' },
-  { bg: 'rgba(255,230,170,0.28)', border: 'rgba(255,210,130,0.55)', bTop: 'rgba(255,245,210,0.8)', text: '#5a3a0a', dbg: 'rgba(255,200,100,0.1)', dborder: 'rgba(255,210,130,0.25)', dbTop: 'rgba(255,235,180,0.3)', dtext: '#ffecb8' },
-  { bg: 'rgba(210,255,170,0.28)', border: 'rgba(185,245,130,0.55)', bTop: 'rgba(235,255,210,0.8)', text: '#2a5a0a', dbg: 'rgba(180,245,120,0.1)', dborder: 'rgba(185,245,130,0.25)', dbTop: 'rgba(220,255,180,0.3)', dtext: '#dcffb8' },
-  { bg: 'rgba(255,180,210,0.28)', border: 'rgba(255,150,185,0.55)', bTop: 'rgba(255,220,240,0.8)', text: '#5a1a35', dbg: 'rgba(255,120,180,0.1)', dborder: 'rgba(255,150,185,0.25)', dbTop: 'rgba(255,200,230,0.3)', dtext: '#ffcee3' },
-  { bg: 'rgba(180,255,235,0.28)', border: 'rgba(140,245,210,0.55)', bTop: 'rgba(220,255,248,0.8)', text: '#1a5a40', dbg: 'rgba(120,245,200,0.1)', dborder: 'rgba(140,245,210,0.25)', dbTop: 'rgba(200,255,240,0.3)', dtext: '#cefff0' },
-  { bg: 'rgba(220,180,255,0.28)', border: 'rgba(195,150,255,0.55)', bTop: 'rgba(240,220,255,0.8)', text: '#3a1a5a', dbg: 'rgba(180,120,255,0.1)', dborder: 'rgba(195,150,255,0.25)', dbTop: 'rgba(225,200,255,0.3)', dtext: '#e8ceff' },
-  { bg: 'rgba(255,255,255,0.45)', border: 'rgba(255,255,255,0.65)', bTop: 'rgba(255,255,255,0.95)', text: '#2a2a3a', dbg: 'rgba(255,255,255,0.1)', dborder: 'rgba(255,255,255,0.25)', dbTop: 'rgba(255,255,255,0.35)', dtext: '#f0f0ff' },
-];
-
 function isDarkMode() {
   return document.documentElement.classList.contains('dark') ||
     (!document.documentElement.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
 }
 
-function pickColor(id) {
-  return PASTEL_COLORS[Number(id) % PASTEL_COLORS.length];
-}
 
 function loadEntries() {
   const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
@@ -741,7 +722,7 @@ function loadEntries() {
     .map(e => ({
       id: Number(e.id), name: String(e.name || 'Unnamed'),
       ms: Number(e.ms) || 0, ts: Number(e.ts),
-      colorIdx: Number(e.colorIdx) || 0, untracked: !!e.untracked,
+      untracked: !!e.untracked,
       sortOrder: e.sortOrder, jiraKey: e.jiraKey || null,
       jiraSummary: e.jiraSummary || null, jiraDesc: e.jiraDesc || '',
       jiraSent: !!e.jiraSent, clientName: e.clientName || null,
@@ -808,7 +789,6 @@ function esc(s) {
 }
 
 var _menuOpenId = null;
-var _menuColorIdx = 0;
 
 document.addEventListener('click', function(e) {
   if (!e.target.closest('#floating-menu') && !e.target.closest('.btn-dots')) {
@@ -816,23 +796,6 @@ document.addEventListener('click', function(e) {
   }
 });
 
-function showColorPicker(id) {
-  var picker = document.getElementById('fm-color-picker');
-  if (!picker) return;
-  picker.style.display = picker.style.display === 'flex' ? 'none' : 'flex';
-}
-
-function setEntryColor(id, colorIdx) {
-  var entries = loadEntries();
-  var idx = entries.findIndex(function(e) { return e.id === Number(id); });
-  if (idx === -1) return;
-  entries[idx].colorIdx = colorIdx;
-  saveEntries(entries);
-  _menuColorIdx = colorIdx;
-  closeFloatingMenu();
-  renderToday();
-  renderHistory();
-}
 
 function closeFloatingMenu() {
   var fm = document.getElementById('floating-menu');
@@ -847,7 +810,6 @@ function toggleMenu(e, id) {
   _menuOpenId = id;
   var entries = loadEntries();
   var entry = entries.find(function(e) { return e.id === Number(id); });
-  _menuColorIdx = entry ? (entry.colorIdx || 0) : 0;
   var dark = isDarkMode();
   fm.style.background = 'rgba(255,255,255,' + (dark ? '0.08' : '0.22') + ')';
   fm.style.border = '1px solid rgba(255,255,255,' + (dark ? '0.14' : '0.32') + ')';
@@ -939,10 +901,8 @@ function startTimer() {
     if (!name) return;
     const entries = loadEntries();
     const todayKey = dayKey(Date.now());
-    const todayCount = entries.filter(e => dayKey(e.ts || Date.now()) === todayKey).length;
-    const colorIdx = todayCount % PASTEL_COLORS.length;
     const id = Date.now();
-    const newEntry = { id, name, ms: 0, ts: Date.now(), colorIdx, untracked: true };
+    const newEntry = { id, name, ms: 0, ts: Date.now(), untracked: true };
     entries.push(newEntry);
     saveEntries(entries);
     input.value = '';
@@ -990,12 +950,8 @@ function addTask() {
   const name = input.value.trim();
   if (!name) return;
   const entries = loadEntries();
-  const todayKey = dayKey(Date.now());
-  // assign color based on how many tasks exist today
-  const todayCount = entries.filter(e => dayKey(e.ts || Date.now()) === todayKey || e.untracked).length;
-  const colorIdx = todayCount % PASTEL_COLORS.length;
   const id = Date.now();
-  entries.push({ id, name, ms: 0, ts: Date.now(), colorIdx, untracked: true });
+  entries.push({ id, name, ms: 0, ts: Date.now(), untracked: true });
   saveEntries(entries);
   input.value = '';
   renderToday();
@@ -1970,10 +1926,8 @@ function confirmJiraIssue(key, summary) {
   closeJiraDescDialog();
   var entries = loadEntries();
   var todayKey = dayKey(Date.now());
-  var todayCount = entries.filter(function(e) { return dayKey(e.ts || Date.now()) === todayKey; }).length;
-  var colorIdx = todayCount % PASTEL_COLORS.length;
   var id = Date.now();
-  entries.push({ id: id, name: summary, ms: 0, ts: Date.now(), colorIdx: colorIdx, untracked: true, jiraKey: key, jiraSummary: summary, jiraDesc: desc, jiraSent: false, clientName: null });
+  entries.push({ id: id, name: summary, ms: 0, ts: Date.now(), untracked: true, jiraKey: key, jiraSummary: summary, jiraDesc: desc, jiraSent: false, clientName: null });
   saveEntries(entries);
   var searchInput = document.getElementById('jira-search-input');
   if (searchInput) { searchInput.value = ''; }
