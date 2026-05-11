@@ -440,6 +440,24 @@ input[type="color"] {
           <span id="jira-status" style="font-size:12px;color:rgba(255,255,255,0.55);"></span>
         </div>
       </div>
+      <div class="settings-label" style="margin-top:0.5rem;">Google Calendar</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;position:relative;">
+        <div id="gcal-connected-view" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;flex:1;">
+            <span style="font-size:18px;">✓</span>
+            <div id="gcal-email-label" style="font-size:13px;font-weight:600;color:white;"></div>
+          </div>
+          <button onclick="disconnectGoogleCalendar()" class="btn" style="padding:7px 16px;font-size:12px;">Disconnect</button>
+        </div>
+        <div id="gcal-disconnected-view" style="display:flex;flex-direction:column;gap:8px;">
+          <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;">Sync today's meetings as tasks automatically at midnight and on first login each day.</p>
+          <button onclick="connectGoogleCalendar()" class="btn primary" style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;align-self:flex-start;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.75" y="2.75" width="12.5" height="11.5" rx="1.5" stroke="#2a0a50" stroke-width="1.5"/><path d="M1.75 6.25h12.5" stroke="#2a0a50" stroke-width="1.5"/><path d="M5.25 1.25v2.5M10.75 1.25v2.5" stroke="#2a0a50" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Connect Google Calendar
+          </button>
+          <span id="gcal-status" style="font-size:12px;color:rgba(255,255,255,0.55);min-height:16px;"></span>
+        </div>
+      </div>
       <div class="settings-label" style="margin-top:0.5rem;">Slack standup</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;position:relative;">
         <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;">Your standup channel (for display only).</p>
@@ -576,6 +594,19 @@ async function _loadUserData() {
   const { data: settRow } = await _sb.from('user_settings').select('settings').maybeSingle();
   _settings = (settRow && settRow.settings) ? settRow.settings : {};
   await _migrateFromLocalStorage();
+  // Consume Google Calendar tokens stashed during the OAuth callback redirect.
+  // They can't be written directly in onAuthStateChange because _settings and
+  // _currentUser aren't populated until after _loadUserData() runs.
+  var gcalTmp = localStorage.getItem('gcal_token_tmp');
+  if (gcalTmp) {
+    _settings['gcal_access_token'] = gcalTmp;
+    _settings['gcal_token_expiry'] = localStorage.getItem('gcal_expiry_tmp') || '';
+    var gcalRefreshTmp = localStorage.getItem('gcal_refresh_tmp');
+    if (gcalRefreshTmp) _settings['gcal_refresh_token'] = gcalRefreshTmp;
+    _settings['gcal_email'] = localStorage.getItem('gcal_email_tmp') || '';
+    ['gcal_token_tmp','gcal_expiry_tmp','gcal_refresh_tmp','gcal_email_tmp'].forEach(function(k) { localStorage.removeItem(k); });
+    await _pushSettings();
+  }
 }
 
 async function _migrateFromLocalStorage() {
@@ -649,6 +680,8 @@ function _initApp() {
     overlay.style.opacity = noiseVal.toFixed(2);
   }
   localStorage.removeItem('ltt_proxy_secret'); // clean up old key
+  updateGcalUI();
+  syncGoogleCalendarEvents();
   // Load proxy config first so JIRA_CLIENT_SECRET is available for the OAuth callback
   loadConfig().then(function() {
     if (window.location.search.includes('code=')) handleOAuthCallback();
@@ -683,6 +716,16 @@ async function _handleAuthSession(session) {
 _sb.auth.getSession()
   .then(function(result) {
     var session = result && result.data && result.data.session;
+    // If we're returning from a Google Calendar OAuth flow, stash the provider
+    // token in localStorage so _loadUserData() can safely persist it to Supabase
+    // after _settings is populated.
+    if (localStorage.getItem('gcal_connecting') && session && session.provider_token) {
+      localStorage.removeItem('gcal_connecting');
+      localStorage.setItem('gcal_token_tmp', session.provider_token);
+      localStorage.setItem('gcal_expiry_tmp', String(Date.now() + 3500000));
+      if (session.provider_refresh_token) localStorage.setItem('gcal_refresh_tmp', session.provider_refresh_token);
+      localStorage.setItem('gcal_email_tmp', (session.user && session.user.email) || '');
+    }
     _handleAuthSession(session);
   })
   .catch(function(e) {
@@ -1144,7 +1187,7 @@ function showTab(name) {
   });
   if (name === 'history') renderHistory();
   if (name === 'weekly') renderWeekly();
-  if (name === 'settings') { renderSettings(); loadSlackChannelSetting(); }
+  if (name === 'settings') { renderSettings(); loadSlackChannelSetting(); updateGcalUI(); }
 }
 
 
@@ -2633,6 +2676,86 @@ async function sendSlackStandup() {
   }
 }
 
+// ---- GOOGLE CALENDAR ----
+
+function connectGoogleCalendar() {
+  var st = document.getElementById('gcal-status');
+  if (st) { st.textContent = 'Redirecting to Google…'; st.style.color = 'rgba(255,255,255,0.55)'; }
+  localStorage.setItem('gcal_connecting', '1');
+  _sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      scopes: 'https://www.googleapis.com/auth/calendar.readonly',
+      queryParams: { access_type: 'offline', prompt: 'consent' },
+      redirectTo: window.location.origin + window.location.pathname
+    }
+  });
+}
+
+function disconnectGoogleCalendar() {
+  ['gcal_access_token','gcal_token_expiry','gcal_refresh_token','gcal_email','gcal_last_sync_date'].forEach(function(k) { removeSetting(k); });
+  updateGcalUI();
+}
+
+function updateGcalUI() {
+  var connView = document.getElementById('gcal-connected-view');
+  var discView = document.getElementById('gcal-disconnected-view');
+  if (!connView || !discView) return;
+  var connected = !!getSetting('gcal_access_token');
+  connView.style.display = connected ? 'flex' : 'none';
+  discView.style.display = connected ? 'none' : 'flex';
+  if (connected) {
+    var label = document.getElementById('gcal-email-label');
+    if (label) label.textContent = 'Connected as ' + (getSetting('gcal_email') || 'Google account');
+  }
+}
+
+async function syncGoogleCalendarEvents() {
+  var token = getSetting('gcal_access_token');
+  if (!token) return;
+  var expiry = parseInt(getSetting('gcal_token_expiry') || '0');
+  if (Date.now() > expiry) {
+    console.warn('[GCal] Access token expired — reconnect Google Calendar in Settings.');
+    return;
+  }
+  var today = dayKey(Date.now());
+  if (getSetting('gcal_last_sync_date') === today) return;
+  try {
+    var now = new Date();
+    var startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
+    var endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+    var url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+      + '?timeMin=' + encodeURIComponent(startOfDay)
+      + '&timeMax=' + encodeURIComponent(endOfDay)
+      + '&singleEvents=true&orderBy=startTime&maxResults=50';
+    var resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!resp.ok) { console.warn('[GCal] API error:', resp.status); return; }
+    var data = await resp.json();
+    var events = (data.items || []).filter(function(ev) {
+      return ev.status !== 'cancelled' && ev.summary;
+    });
+    var entries = loadEntries();
+    var baseTs = Date.now();
+    events.forEach(function(ev, i) {
+      entries.push({
+        id: baseTs + i,
+        name: ev.summary,
+        ms: 0,
+        ts: baseTs + i,
+        untracked: true,
+        jiraKey: null,
+        jiraSummary: null,
+        jiraDesc: ev.summary,
+        jiraSent: false,
+        clientName: null
+      });
+    });
+    saveEntries(entries);
+    setSetting('gcal_last_sync_date', today);
+    if (events.length > 0) renderToday();
+  } catch(e) { console.error('[GCal] Sync error:', e); }
+}
+
 function autoCleanSentEntries() {
   var entries = loadEntries();
   var todayKey = dayKey(Date.now());
@@ -2647,7 +2770,13 @@ function autoCleanSentEntries() {
 (function scheduleMidnightCleanup() {
   var now = new Date();
   var midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
-  setTimeout(function() { autoCleanSentEntries(); renderToday(); renderHistory(); scheduleMidnightCleanup(); }, midnight - now);
+  setTimeout(function() {
+    autoCleanSentEntries();
+    syncGoogleCalendarEvents();
+    renderToday();
+    renderHistory();
+    scheduleMidnightCleanup();
+  }, midnight - now);
 })();
 
 // Init is driven by _sb.auth.onAuthStateChange above.
