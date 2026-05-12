@@ -2883,13 +2883,38 @@ function updateGcalUI() {
   }
 }
 
+async function refreshGcalToken() {
+  var refreshToken = getSetting('gcal_refresh_token');
+  if (!refreshToken) return false;
+  try {
+    var resp = await fetch(LTT_PROXY_URL + '/gcal-refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: refreshToken })
+    });
+    if (!resp.ok) return false;
+    var data = await resp.json();
+    if (!data.access_token) return false;
+    setSetting('gcal_access_token', data.access_token);
+    setSetting('gcal_token_expiry', String(Date.now() + (data.expires_in - 60) * 1000));
+    return true;
+  } catch(e) {
+    console.error('[GCal] Token refresh error:', e);
+    return false;
+  }
+}
+
 async function syncGoogleCalendarEvents() {
   var token = getSetting('gcal_access_token');
   if (!token) return;
   var expiry = parseInt(getSetting('gcal_token_expiry') || '0');
   if (Date.now() > expiry) {
-    console.warn('[GCal] Access token expired — reconnect Google Calendar in Settings.');
-    return;
+    var refreshed = await refreshGcalToken();
+    if (!refreshed) {
+      console.warn('[GCal] Access token expired and refresh failed — reconnect Google Calendar in Settings.');
+      return;
+    }
+    token = getSetting('gcal_access_token');
   }
   var today = dayKey(Date.now());
   if (getSetting('gcal_last_sync_date') === today) return;
