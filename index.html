@@ -2612,8 +2612,11 @@ function showSlackStandupModal(day) {
     ? entries.filter(function(e) { return e.ms > 0 && dayKey(e.ts) === yesterdayKey; })
     : [];
 
-  // Today = all entries in the timer tab (tracked or not)
-  var todayEntries = entries.filter(function(e) { return dayKey(e.ts) === todayKey; });
+  // Today = all entries in the timer tab: today's entries + carried-over untracked from previous days
+  var todayEntries = entries.filter(function(e) {
+    if (dayKey(e.ts) === todayKey) return true;
+    return e.ms === 0 && !e.jiraSent && e.untracked && dayKey(e.ts) !== todayKey;
+  });
 
   var accomplishedText = yesterdayEntries.map(function(e) {
     var desc = e.jiraDesc || e.jiraSummary || e.name;
