@@ -672,7 +672,6 @@ function _showAuthOverlay() {
   _checkUrlHashError();
 }
 function _initApp() {
-  autoCleanSentEntries();
   resetTimer(false);
   loadGradientSetting();
   loadTitle();
@@ -2932,10 +2931,10 @@ async function syncGoogleCalendarEvents() {
     var events = (data.items || []).filter(function(ev) {
       return ev.status !== 'cancelled' && ev.summary;
     });
-    var entries = loadEntries();
     var baseTs = Date.now();
+    var newRows = [];
     events.forEach(function(ev, i) {
-      entries.push({
+      var entry = {
         id: baseTs + i,
         name: ev.summary,
         ms: 0,
@@ -2946,30 +2945,24 @@ async function syncGoogleCalendarEvents() {
         jiraDesc: ev.summary,
         jiraSent: false,
         clientName: null
-      });
+      };
+      _entries.push(entry);
+      newRows.push(_entryToDb(entry));
     });
-    saveEntries(entries);
+    if (newRows.length > 0 && _currentUser) {
+      _sb.from('time_entries').upsert(newRows, { onConflict: 'id' })
+        .then(function(r) { if (r.error) console.error('[GCal] Entry insert error:', r.error); });
+    }
     setSetting('gcal_last_sync_date', today);
-    if (events.length > 0) renderToday();
+    if (newRows.length > 0) renderToday();
   } catch(e) { console.error('[GCal] Sync error:', e); }
 }
 
-function autoCleanSentEntries() {
-  var entries = loadEntries();
-  var todayKey = dayKey(Date.now());
-  var changed = false;
-  var cleaned = entries.filter(function(e) {
-    if (e.jiraSent && dayKey(e.ts) !== todayKey) { changed = true; return false; }
-    return true;
-  });
-  if (changed) saveEntries(cleaned);
-}
 
 (function scheduleMidnightCleanup() {
   var now = new Date();
   var midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
   setTimeout(function() {
-    autoCleanSentEntries();
     syncGoogleCalendarEvents();
     renderToday();
     renderHistory();
