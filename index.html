@@ -1127,7 +1127,7 @@ function renderToday() {
     var btnStyle = isSentToJira
       ? 'border-color:rgba(160,255,180,0.4);background:rgba(160,255,180,0.1);cursor:default;pointer-events:none;'
       : (isActiveRunning ? 'border-color:rgba(80,180,100,0.6);background:rgba(80,180,100,0.3);' : 'border-color:rgba(255,255,255,0.5);');
-    return '<div class="entry-card" draggable="true" data-id="' + e.id + '"' + (isActiveRunning ? ' style="background:rgba(80,180,100,0.07);"' : '') + '>' +
+    var inner =
       '<span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>' +
       (isActiveRunning ? '<span class="track-pulse-dot"></span>' : '') +
       '<div class="entry-info">' +
@@ -1139,8 +1139,15 @@ function renderToday() {
         '<span class="entry-time"' + (isActiveRunning ? ' style="color:#7fd89a;"' : '') + '>' + timeDisplay + '</span>' +
         '<button class="btn-track' + (isActive ? ' active-tracking' : '') + '" onclick="trackEntry(' + e.id + ')" style="' + btnStyle + '"' + (isSentToJira ? ' title="Sent to Jira"' : '') + '>' + trackIcon + '</button>' +
         '<button class="btn-dots" onclick="toggleMenu(event,' + e.id + ')">&#8943;</button>' +
-      '</div>' +
-    '</div>';
+      '</div>';
+    if (isActiveRunning) {
+      return '<div class="entry-card" draggable="true" data-id="' + e.id + '" style="padding:4px 6px;">' +
+        '<div style="background:rgba(80,180,100,0.09);border-radius:8px;padding:6px 8px;display:flex;align-items:center;gap:8px;flex:1;min-width:0;">' +
+          inner +
+        '</div>' +
+      '</div>';
+    }
+    return '<div class="entry-card" draggable="true" data-id="' + e.id + '">' + inner + '</div>';
   }).join('');
   initDragDrop();
   updateBulkJiraBtn();
