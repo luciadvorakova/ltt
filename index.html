@@ -206,6 +206,9 @@ input[type="date"]:focus { border-color: rgba(255,255,255,0.5); }
 .jira-breadcrumb span { cursor: pointer; }
 .jira-breadcrumb span:hover { color: white; }
 .jira-loading { text-align: center; color: rgba(255,255,255,0.45); font-size: 13px; padding: 1.5rem 0; }
+.fav-section-header { font-size:11px;font-weight:700;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.07em;padding:6px 12px 4px; }
+.fav-star-btn { background:none;border:none;cursor:pointer;color:rgba(255,200,30,0.65);font-size:14px;padding:2px 6px;flex-shrink:0;line-height:1;font-family:inherit; }
+.fav-star-btn:hover { color:rgba(255,220,60,1); }
 .lj-item { display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;cursor:pointer;transition:background 0.1s; }
 .lj-item:hover { background:rgba(255,255,255,0.1); }
 .lj-tab { background:none;border:none;cursor:pointer;font-size:13px;padding:6px 14px;border-radius:99px;font-family:inherit;color:rgba(255,255,255,0.55);transition:background 0.15s,color 0.15s; }
@@ -381,7 +384,7 @@ input[type="color"] {
       <div id="jira-add" style="display:block;" class="jira-picker">
       <div id="jira-search-pane">
         <div class="jira-search-row" style="display:flex;gap:8px;align-items:stretch;">
-          <input type="text" id="jira-search-input" placeholder="Search Jira issues..." oninput="debounceJiraSearch(this.value)" onfocus="repositionSearchDropdown()" style="flex:1;" />
+          <input type="text" id="jira-search-input" placeholder="Search Jira issues..." oninput="debounceJiraSearch(this.value)" onfocus="onJiraSearchFocus()" style="flex:1;" />
           <button class="btn-add" id="jtab-browse" onclick="setJiraTab('browse')" style="flex-shrink:0;">Browse</button>
         </div>
         <div class="jira-results-wrap" id="jira-search-anchor"></div>
@@ -841,6 +844,9 @@ document.addEventListener('click', function(e) {
   if (!e.target.closest('#floating-menu') && !e.target.closest('.btn-dots')) {
     closeFloatingMenu();
   }
+  if (!e.target.closest('#jira-fav-dropdown') && !e.target.closest('#jira-search-input')) {
+    hideFavDropdown();
+  }
 });
 
 
@@ -863,6 +869,7 @@ function toggleMenu(e, id) {
   fm.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,' + (dark ? '0.18' : '0.38') + '), 0 8px 32px rgba(' + (dark ? '0,0,0,0.45' : '40,10,100,0.15') + ')';
   var entryForMenu = loadEntries().find(function(e) { return e.id === Number(id); });
   var hasJira = entryForMenu && entryForMenu.jiraKey && !entryForMenu.jiraSent;
+  var isFav = entryForMenu && entryForMenu.jiraKey && isFavourite(entryForMenu.jiraKey);
   var isSent = entryForMenu && entryForMenu.jiraSent;
   fm.innerHTML =
     '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.88);font-weight:400;font-family:inherit" class="fm-menu-btn" onclick="showLogForm(' + id + ')">Add time manually</button>' +
@@ -876,6 +883,8 @@ function toggleMenu(e, id) {
     (entryForMenu && entryForMenu.jiraKey && !entryForMenu.jiraSent ? (entryForMenu.ms > 0 ? '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(160,255,180,0.9);font-weight:500;font-family:inherit" class="fm-menu-btn" onclick="showSendToJiraDialog(' + id + ')">Send to Jira</button>' : '<div style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;color:rgba(160,255,180,0.35);font-weight:500;">Send to Jira <span style="font-size:11px;opacity:0.6;">(track time first)</span></div>') : '') +
     (hasJira ? '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.88);font-weight:400;font-family:inherit" class="fm-menu-btn" onclick="editJiraDesc(' + id + ')">Edit description</button>' : '') +
     (isSent ? '<div style="padding:8px 16px;font-size:12px;color:rgba(160,255,180,0.7);">✓ Sent to Jira</div>' : '') +
+    (entryForMenu && entryForMenu.jiraKey ? '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(255,220,60,0.85);font-weight:400;font-family:inherit" class="fm-menu-btn" onclick="toggleFavourite(' + id + ')">' + (isFav ? '★ Remove from favourites' : '☆ Add to favourites') + '</button>' : '') +
+    (entryForMenu && entryForMenu.jiraKey ? '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.88);font-weight:400;font-family:inherit" class="fm-menu-btn" onclick="duplicateEntry(' + id + ')">Duplicate task</button>' : '') +
     '<div style="height:1px;background:rgba(255,255,255,0.12);margin:4px 12px;"></div>' +
     '<button style="display:block;width:100%;text-align:left;padding:10px 16px;font-size:13px;background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.88);font-weight:400;font-family:inherit" class="fm-menu-btn" onclick="deleteEntry(' + id + ')">Delete task</button>';
   var shimmer = document.createElement('div');
@@ -1736,12 +1745,152 @@ function debounceJiraSearch(val) {
   if (!val.trim()) {
     el.innerHTML = '';
     el.style.display = 'none';
+    showFavDropdown();
     return;
   }
+  hideFavDropdown();
   repositionSearchDropdown();
   el.innerHTML = '<div class="jira-loading">Searching...</div>';
   el.style.display = 'flex';
   _jiraSearchTimer = setTimeout(function() { jiraSearch(val); }, 400);
+}
+
+// ---- FAVOURITES & RECENTLY USED ----
+
+function getFavourites() {
+  try { return JSON.parse(getSetting('jira_favourites') || '[]'); } catch(e) { return []; }
+}
+function getRecent() {
+  try { return JSON.parse(getSetting('jira_recent') || '[]'); } catch(e) { return []; }
+}
+function saveFavourites(favs) { setSetting('jira_favourites', JSON.stringify(favs)); }
+function saveRecent(recent) { setSetting('jira_recent', JSON.stringify(recent)); }
+
+function isFavourite(jiraKey) {
+  return getFavourites().some(function(f) { return f.jiraKey === jiraKey; });
+}
+function addToFavourites(item) {
+  var favs = getFavourites();
+  if (favs.some(function(f) { return f.jiraKey === item.jiraKey; })) return;
+  favs.push(item);
+  saveFavourites(favs);
+}
+function removeFromFavourites(jiraKey) {
+  saveFavourites(getFavourites().filter(function(f) { return f.jiraKey !== jiraKey; }));
+}
+function addToRecent(item) {
+  var recent = getRecent().filter(function(r) { return r.jiraKey !== item.jiraKey; });
+  recent.unshift(item);
+  if (recent.length > 10) recent = recent.slice(0, 10);
+  saveRecent(recent);
+}
+function updateFavRecentClientName(jiraKey, clientName) {
+  saveFavourites(getFavourites().map(function(f) {
+    return f.jiraKey === jiraKey ? Object.assign({}, f, { clientName: clientName }) : f;
+  }));
+  saveRecent(getRecent().map(function(r) {
+    return r.jiraKey === jiraKey ? Object.assign({}, r, { clientName: clientName }) : r;
+  }));
+}
+
+function toggleFavourite(id) {
+  closeFloatingMenu();
+  var entry = _entries.find(function(e) { return e.id === Number(id); });
+  if (!entry || !entry.jiraKey) return;
+  if (isFavourite(entry.jiraKey)) {
+    removeFromFavourites(entry.jiraKey);
+  } else {
+    addToFavourites({ jiraKey: entry.jiraKey, jiraSummary: entry.jiraSummary || entry.name, jiraDesc: entry.jiraDesc || '', clientName: entry.clientName || null });
+  }
+}
+
+function duplicateEntry(id) {
+  closeFloatingMenu();
+  var entry = _entries.find(function(e) { return e.id === Number(id); });
+  if (!entry) return;
+  var newId = Date.now();
+  var newEntry = {
+    id: newId, name: entry.jiraSummary || entry.name, ms: 0, ts: newId,
+    untracked: true, jiraKey: entry.jiraKey || null, jiraSummary: entry.jiraSummary || null,
+    jiraDesc: entry.jiraDesc || '', jiraSent: false, clientName: entry.clientName || null,
+    sortOrder: undefined, deletedFromBulk: false, carriedOver: false
+  };
+  _entries.push(newEntry);
+  if (_currentUser) {
+    _sb.from('time_entries').upsert(_entryToDb(newEntry), { onConflict: 'id' })
+      .then(function(r) { if (r.error) console.error('duplicate upsert error:', r.error); });
+  }
+  renderToday();
+}
+
+function repositionFavDropdown() {
+  var anchor = document.getElementById('jira-search-anchor');
+  var portal = document.getElementById('jira-fav-dropdown');
+  if (!anchor || !portal) return;
+  var r = anchor.getBoundingClientRect();
+  portal.style.top = (r.top + 4) + 'px';
+  portal.style.left = r.left + 'px';
+  portal.style.width = r.width + 'px';
+}
+function hideFavDropdown() {
+  var el = document.getElementById('jira-fav-dropdown');
+  if (el) el.style.display = 'none';
+}
+function showFavDropdown() {
+  if (!isJiraConnected()) return;
+  var favs = getFavourites();
+  var recent = getRecent();
+  if (!favs.length && !recent.length) return;
+  renderFavDropdown(favs, recent);
+}
+function renderFavDropdown(favs, recent) {
+  var el = document.getElementById('jira-fav-dropdown');
+  if (!el) return;
+  repositionFavDropdown();
+  var html = '';
+  if (favs.length) {
+    html += '<div class="fav-section-header">★ Favourites</div>';
+    var favsHtml = favs.map(function(f) {
+      return '<div class="jira-result-item" style="padding-right:4px;" data-key="' + esc(f.jiraKey) + '" data-summary="' + esc(f.jiraSummary || '') + '" onclick="handleJiraItemClick(this)">' +
+        '<span class="jira-result-key">' + esc(f.jiraKey) + '</span>' +
+        '<span class="jira-result-name" style="flex:1;min-width:0;">' + esc(f.jiraSummary || '') + '</span>' +
+        '<button class="fav-star-btn" onclick="removeFavAndRefresh(\'' + f.jiraKey + '\');event.stopPropagation();" title="Remove from favourites">★</button>' +
+      '</div>';
+    }).join('');
+    var scrollStyle = favs.length > 5 ? 'max-height:180px;overflow-y:auto;' : '';
+    html += '<div style="' + scrollStyle + 'display:flex;flex-direction:column;gap:4px;padding:0 6px 4px;">' + favsHtml + '</div>';
+  }
+  if (recent.length) {
+    if (favs.length) html += '<div style="height:1px;background:rgba(255,255,255,0.1);margin:4px 12px;"></div>';
+    html += '<div class="fav-section-header">Recently used</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:4px;padding:0 6px 6px;">' +
+      recent.map(function(r) {
+        return '<div class="jira-result-item" data-key="' + esc(r.jiraKey) + '" data-summary="' + esc(r.jiraSummary || '') + '" onclick="handleJiraItemClick(this)">' +
+          '<span class="jira-result-key">' + esc(r.jiraKey) + '</span>' +
+          '<span class="jira-result-name">' + esc(r.jiraSummary || '') + '</span>' +
+        '</div>';
+      }).join('') + '</div>';
+  }
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+function removeFavAndRefresh(jiraKey) {
+  removeFromFavourites(jiraKey);
+  var favs = getFavourites();
+  var recent = getRecent();
+  if (!favs.length && !recent.length) { hideFavDropdown(); return; }
+  renderFavDropdown(favs, recent);
+}
+function onJiraSearchFocus() {
+  var val = document.getElementById('jira-search-input').value;
+  if (!val.trim()) {
+    var sr = document.getElementById('jira-search-results');
+    if (sr) { sr.innerHTML = ''; sr.style.display = 'none'; }
+    showFavDropdown();
+  } else {
+    repositionSearchDropdown();
+    hideFavDropdown();
+  }
 }
 
 async function jiraSearch(query) {
@@ -1977,10 +2126,12 @@ function confirmJiraIssue(key, summary) {
   var id = Date.now();
   entries.push({ id: id, name: summary, ms: 0, ts: Date.now(), untracked: true, jiraKey: key, jiraSummary: summary, jiraDesc: desc, jiraSent: false, clientName: null });
   saveEntries(entries);
+  addToRecent({ jiraKey: key, jiraSummary: summary, jiraDesc: desc, clientName: null });
   var searchInput = document.getElementById('jira-search-input');
   if (searchInput) { searchInput.value = ''; }
   var searchResults = document.getElementById('jira-search-results');
   if (searchResults) { searchResults.innerHTML = ''; searchResults.style.display = 'none'; }
+  hideFavDropdown();
   renderToday();
   // Fetch parent epic's Client name in background
   fetchClientName(key, id);
@@ -2026,6 +2177,7 @@ async function fetchClientName(key, entryId) {
     }
     if (!clientNameStr.trim()) return;
 
+    updateFavRecentClientName(key, clientNameStr.trim());
     var entries = loadEntries();
     var idx = entries.findIndex(function(e) { return e.id === entryId; });
     if (idx > -1) {
@@ -3036,6 +3188,7 @@ async function syncGoogleCalendarEvents() {
 </div>
 
 <!-- Jira results portals — outside glass-app so backdrop-filter works -->
+<div id="jira-fav-dropdown" style="display:none;position:fixed;z-index:9999;border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.18);background:rgba(10,16,36,0.45);backdrop-filter:blur(40px) saturate(160%) brightness(0.7);-webkit-backdrop-filter:blur(40px) saturate(160%) brightness(0.7);"></div>
 <div id="jira-search-results" style="display:none;position:fixed;z-index:9999;max-height:220px;overflow-y:auto;flex-direction:column;gap:4px;border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);border-radius:14px;padding:6px;box-shadow:0 8px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.18);background:rgba(10,16,36,0.45);backdrop-filter:blur(40px) saturate(160%) brightness(0.7);-webkit-backdrop-filter:blur(40px) saturate(160%) brightness(0.7);"></div>
 <div id="jira-browse-results" style="display:none;position:fixed;z-index:9999;max-height:220px;overflow-y:auto;flex-direction:column;gap:4px;border:1px solid rgba(255,255,255,0.18);border-top-color:rgba(255,255,255,0.32);border-radius:14px;padding:6px;box-shadow:0 8px 40px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.18);background:rgba(10,16,36,0.45);backdrop-filter:blur(40px) saturate(160%) brightness(0.7);-webkit-backdrop-filter:blur(40px) saturate(160%) brightness(0.7);"></div>
 
