@@ -378,13 +378,13 @@ input[type="color"] {
     <!-- Input / Jira picker — same margin regardless of mode -->
     <div style="margin-bottom:1rem;">
       <div id="manual-add-row" class="add-task-row" style="display:none;align-items:stretch;margin-bottom:0;">
-        <input type="text" id="new-task-input" placeholder="Add a task..." maxlength="80" onkeydown="if(event.key==='Enter') addTask()" oninput="updateStartBtn()" style="flex:1;" />
+        <input type="text" id="new-task-input" placeholder="Add a task..." maxlength="80" autocomplete="off" onkeydown="if(event.key==='Enter') addTask()" oninput="updateStartBtn()" style="flex:1;" />
         <button class="btn-add" onclick="addTask()" id="manual-add-btn">Add</button>
       </div>
       <div id="jira-add" style="display:block;" class="jira-picker">
       <div id="jira-search-pane">
         <div class="jira-search-row" style="display:flex;gap:8px;align-items:stretch;">
-          <input type="text" id="jira-search-input" placeholder="Search Jira issues..." oninput="debounceJiraSearch(this.value)" onfocus="onJiraSearchFocus()" style="flex:1;" />
+          <input type="text" id="jira-search-input" placeholder="Search Jira issues..." autocomplete="off" oninput="debounceJiraSearch(this.value)" onfocus="onJiraSearchFocus()" style="flex:1;" />
           <button class="btn-add" id="jtab-browse" onclick="setJiraTab('browse')" style="flex-shrink:0;">Browse</button>
         </div>
         <div class="jira-results-wrap" id="jira-search-anchor"></div>
@@ -470,12 +470,12 @@ input[type="color"] {
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;position:relative;">
         <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;">Your standup channel (for display only).</p>
         <div style="display:flex;gap:8px;align-items:center;">
-          <input type="text" id="slack-channel-input" placeholder="#daily-standup" style="flex:1;padding:9px 16px;border-radius:99px;font-size:13px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
+          <input type="text" id="slack-channel-input" placeholder="#daily-standup" autocomplete="off" style="flex:1;padding:9px 16px;border-radius:99px;font-size:13px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
           <button onclick="saveSlackChannel()" class="btn primary" style="padding:9px 18px;font-size:13px;flex-shrink:0;">Save</button>
         </div>
         <p style="font-size:12px;color:rgba(255,255,255,0.55);line-height:1.5;margin:0;margin-top:4px;">Your Slack member ID — so standup links to your profile. In Slack: click your avatar → Profile → ··· → Copy member ID.</p>
         <div style="display:flex;gap:8px;align-items:center;">
-          <input type="text" id="slack-user-id-input" placeholder="e.g. U0123456789" style="flex:1;padding:9px 16px;border-radius:99px;font-size:13px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
+          <input type="text" id="slack-user-id-input" placeholder="e.g. U0123456789" autocomplete="off" style="flex:1;padding:9px 16px;border-radius:99px;font-size:13px;background:var(--input-bg);border:1px solid var(--liq-border);color:white;outline:none;box-shadow:var(--liq-shadow-sm);" />
           <button onclick="saveSlackUserId()" class="btn primary" style="padding:9px 18px;font-size:13px;flex-shrink:0;">Save</button>
         </div>
         <span id="slack-userid-status" style="font-size:12px;color:rgba(255,255,255,0.55);min-height:16px;"></span>
@@ -1894,6 +1894,17 @@ function onJiraSearchFocus() {
 }
 
 async function jiraSearch(query) {
+  var keyMatch = query.trim().match(/^([A-Za-z][A-Za-z0-9]*-\d+)$/);
+  var directIssue = null;
+  if (keyMatch) {
+    try {
+      var keyResp = await jiraFetch('/rest/api/3/issue/' + encodeURIComponent(keyMatch[1]) + '?fields=summary');
+      if (keyResp.ok) {
+        var keyData = await keyResp.json();
+        if (keyData.key && keyData.fields) directIssue = { key: keyData.key, summaryText: keyData.fields.summary || '' };
+      }
+    } catch(e) { /* fall through to text search */ }
+  }
   try {
     var jql = 'text ~ "' + query.replace(/"/g, '\"') + '" ORDER BY updated DESC';
     var resp = await jiraFetch('/rest/api/3/issue/picker?query=' + encodeURIComponent(query) + '&currentJQL=' + encodeURIComponent(jql));
@@ -1901,14 +1912,18 @@ async function jiraSearch(query) {
     var data = await resp.json();
     var issues = [];
     (data.sections || []).forEach(function(s) { issues = issues.concat(s.issues || []); });
+    if (directIssue) issues = [directIssue].concat(issues.filter(function(i) { return i.key !== directIssue.key; }));
     renderJiraSearchResults(issues, query);
   } catch(e) {
+    if (directIssue) { renderJiraSearchResults([directIssue], query); return; }
     // fallback to JQL search
     try {
       var jql2 = 'summary ~ "' + query.replace(/"/g, '\"') + '*" OR text ~ "' + query.replace(/"/g, '\"') + '" ORDER BY updated DESC';
       var resp2 = await jiraFetch('/rest/api/3/search/jql?jql=' + encodeURIComponent(jql2) + '&maxResults=20&fields=summary,project,issuetype,status');
       var data2 = await resp2.json();
-      renderJiraSearchResultsFull(data2.issues || []);
+      var fullIssues = data2.issues || [];
+      if (directIssue) fullIssues = [{ key: directIssue.key, fields: { summary: directIssue.summaryText } }].concat(fullIssues.filter(function(i) { return i.key !== directIssue.key; }));
+      renderJiraSearchResultsFull(fullIssues);
     } catch(e2) {
       var _srErr = document.getElementById('jira-search-results');
       _srErr.innerHTML = '<div class="jira-loading">Search failed. Please try again.</div>';
