@@ -107,6 +107,8 @@ h1 { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
 .entries-list { display: flex; flex-direction: column; overflow: visible; }
 .entry-card { padding: 12px 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; overflow: visible; position: relative; border-top: 1px solid rgba(255,255,255,0.16); transition: transform 0.15s, opacity 0.15s; }
 .entry-card:first-child { border-top: none; padding-top: 4px; }
+.entry-card.active-running { padding: 4px 0; }
+.active-running-inner { background: rgba(80,180,100,0.09); border-radius: 8px; padding: 8px; display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; width: 100%; box-sizing: border-box; }
 .entry-info { flex: 1; min-width: 0; }
 .entry-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; flex-wrap: nowrap; gap: 0; }
 .entry-meta { font-size: 12px; margin-top: 2px; color: var(--text2); }
@@ -1141,8 +1143,8 @@ function renderToday() {
         '<button class="btn-dots" onclick="toggleMenu(event,' + e.id + ')">&#8943;</button>' +
       '</div>';
     if (isActiveRunning) {
-      return '<div class="entry-card" draggable="true" data-id="' + e.id + '" style="padding-top:4px;padding-bottom:4px;">' +
-        '<div style="background:rgba(80,180,100,0.09);border-radius:8px;padding:8px;margin:0 6px;display:flex;align-items:center;gap:8px;flex:1;min-width:0;">' +
+      return '<div class="entry-card active-running" draggable="true" data-id="' + e.id + '">' +
+        '<div class="active-running-inner">' +
           inner +
         '</div>' +
       '</div>';
