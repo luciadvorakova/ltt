@@ -282,6 +282,8 @@ input[type="color"] {
 .btn-apply-grad::after { content:''; position:absolute; top:0; left:0; right:0; height:50%; background: linear-gradient(180deg, rgba(255,255,255,0.2), transparent); border-radius:99px 99px 0 0; pointer-events:none; }
 .btn-apply-grad:hover { filter: brightness(1.05); }
 @keyframes ltt-spin { to { transform: rotate(360deg); } }
+@keyframes ltt-track-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.35; transform:scale(0.8); } }
+.track-pulse-dot { width:6px;height:6px;border-radius:50%;background:#7fd89a;flex-shrink:0;animation:ltt-track-pulse 1.5s ease-in-out infinite; }
 </style>
 <script>
 (function(){
@@ -1111,31 +1113,31 @@ function renderToday() {
   }
 
   el.innerHTML = allDisplayed.map(function(e) {
-    const dark = isDarkMode();
-    const cardBg = 'transparent';
-    const cardBorder = 'rgba(255,255,255,0.16)';
-    const cardBTop = 'rgba(255,255,255,0.16)';
-    const cardText = 'rgba(255,255,255,1)';
     const isActive = e.id === activeEntryId;
+    const isActiveRunning = isActive && running;
     var isSentToJira = e.jiraSent;
     const trackIcon = isSentToJira
-    ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5.5L3.5 7.5L8.5 2.5" stroke="rgba(160,255,180,0.9)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    : (isActive
-      ? (running
-        ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1.5" y="1.5" width="2.5" height="7" rx="1" fill="white"/><rect x="6" y="1.5" width="2.5" height="7" rx="1" fill="white"/></svg>'
-        : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>')
-      : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>');
+      ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5.5L3.5 7.5L8.5 2.5" stroke="rgba(160,255,180,0.9)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : (isActive
+        ? (running
+          ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1.5" y="1.5" width="2.5" height="7" rx="1" fill="#7fd89a"/><rect x="6" y="1.5" width="2.5" height="7" rx="1" fill="#7fd89a"/></svg>'
+          : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>')
+        : '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 1.5L8.5 5L2.5 8.5V1.5Z" fill="white"/></svg>');
     const timeDisplay = e.ms > 0 ? fmtShort(e.ms) : '';
-    return '<div class="entry-card" draggable="true" data-id="' + e.id + '">' +
+    var btnStyle = isSentToJira
+      ? 'border-color:rgba(160,255,180,0.4);background:rgba(160,255,180,0.1);cursor:default;pointer-events:none;'
+      : (isActiveRunning ? 'border-color:rgba(80,180,100,0.6);background:rgba(80,180,100,0.3);' : 'border-color:rgba(255,255,255,0.5);');
+    return '<div class="entry-card" draggable="true" data-id="' + e.id + '"' + (isActiveRunning ? ' style="background:rgba(80,180,100,0.07);"' : '') + '>' +
       '<span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>' +
+      (isActiveRunning ? '<span class="track-pulse-dot"></span>' : '') +
       '<div class="entry-info">' +
         '<div class="entry-name">' + (e.clientName ? '<span style="font-size:10px;font-weight:700;padding:1px 8px;border-radius:99px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.7);margin-right:6px;flex-shrink:0;">' + esc(e.clientName) + '</span>' : '') + (e.jiraKey ? '<span class="jira-issue-key-badge" style="margin-left:0;margin-right:6px;">' + esc(e.jiraKey) + '</span>' : '') + esc(e.jiraSummary || e.name) + '</div>' +
         (e.jiraKey && !e.jiraSent ? '<div class="entry-desc" onclick="editJiraDescInline(' + e.id + ')">' + (e.jiraDesc ? esc(e.jiraDesc) : '<span style="opacity:0.4">Add description...</span>') + '</div>' : '') +
         (e.jiraKey && e.jiraSent ? '<div class="entry-desc" style="opacity:0.5;">' + (e.jiraDesc ? esc(e.jiraDesc) : '') + ' <span style="color:rgba(160,255,180,0.8)">✓ Sent</span></div>' : '') +
       '</div>' +
       '<div class="entry-actions">' +
-        '<span class="entry-time">' + timeDisplay + '</span>' +
-        '<button class="btn-track' + (isActive ? ' active-tracking' : '') + '" onclick="trackEntry(' + e.id + ')" style="border-color:rgba(255,255,255,0.5);" ' + (isSentToJira ? 'title="Sent to Jira" style="border-color:rgba(160,255,180,0.4);background:rgba(160,255,180,0.1);cursor:default;pointer-events:none;"' : '') + '>' + trackIcon + '</button>' +
+        '<span class="entry-time"' + (isActiveRunning ? ' style="color:#7fd89a;"' : '') + '>' + timeDisplay + '</span>' +
+        '<button class="btn-track' + (isActive ? ' active-tracking' : '') + '" onclick="trackEntry(' + e.id + ')" style="' + btnStyle + '"' + (isSentToJira ? ' title="Sent to Jira"' : '') + '>' + trackIcon + '</button>' +
         '<button class="btn-dots" onclick="toggleMenu(event,' + e.id + ')">&#8943;</button>' +
       '</div>' +
     '</div>';
